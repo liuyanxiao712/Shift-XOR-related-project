@@ -71,6 +71,12 @@ def generate_b_row_vector(alpha):
         b = randMatrix(1, alpha, 0, 1)
     return b
 
+def generate_b_1_vector(alpha):
+    b = zeros(1,alpha)
+    ran = random.randint(0,alpha-1)
+    b[ran] = 1
+    return b
+
 def generate_Z(alpha, d):
     Z = randMatrix(alpha, d, 0, 1)
     while Z.rank() != alpha:
@@ -292,7 +298,7 @@ def repair_1_block(G, k):
     tempG = Matrix([G[0:(fail_node - 1)*alpha, :], G[fail_node*alpha: , :]])
     # print("tempG", tempG)
     for p in combinations(list(range(1, n)), k-1):
-        # print(p)
+        print(p)
         temp_matrix = tempG[(p[0]-1)*alpha:p[0]*alpha, :]
         for i in range(1, k-1):
             temp_matrix = Matrix([temp_matrix, tempG[(p[i]-1)*alpha:alpha*p[i], :]])
@@ -300,11 +306,11 @@ def repair_1_block(G, k):
         temp_matrix = tiny_binary_operation(temp_matrix)
         # print("temp_matrix", temp_matrix)
         det = temp_matrix.det()
-        # print("det", det)
+        print("det before", det)
+        det = binary_operation(det)
+        print("det after", det)
         if det == 0:
             fail = 0
-            # print("before binary operation", det)
-            # print("after binary operation", binary_operation(det))
             break
     # print(fail)
     if fail == 0:
@@ -486,18 +492,63 @@ def repair_3_block(G, k):
         print("---------------------For matrix ", G.rows, "*", G.cols, "sometimes we cannot fix above matrix-----------------------")
 
 
+def repair_4_block(G, k):
+    """ Only difference with repair_1_block is: this is repair-by-transfer, vector b is to select only one packet in a node
+    :param G: matrix to be repaired, failed node is randomly chosen in this marix
+    :param k: originally we have k nodes
+    :return: 0 to fail and 1 to success
+    """
+    # print("G", G)
+    row = G.rows
+    col = G.cols
+    alpha = col // k
+    n = row // alpha
+    d = alpha + k - 1
+    fail_node = random.randint(1,n)
+    Z = generate_Z(alpha, d)
+    # print(row, col, alpha, n, d, fail_node, Z)
 
+    access_nodes = set()
+    while len(access_nodes) < d:
+        access_nodes.add(random.randint(1,n))
+        if fail_node in access_nodes:
+            access_nodes.remove(fail_node)
+    access_nodes = list(access_nodes)
+    # print("access_nodes", access_nodes)
 
+    access_matrix = generate_b_1_vector(alpha) * G[(access_nodes[0]-1) * alpha: access_nodes[0] * alpha, :]
 
+    for i in range(1,d):
+        access_matrix = Matrix([access_matrix, generate_b_1_vector(alpha) * G[(access_nodes[i]-1)*alpha : access_nodes[i]*alpha, :]])
+    # print("access_matrix", access_matrix)
+    newcomer = Z * access_matrix
+    # print("newcomer", newcomer)
 
-
-
-
-
-
-
-
-
+    fail = 1
+    tempG = Matrix([G[0:(fail_node - 1)*alpha, :], G[fail_node*alpha: , :]])
+    # print("tempG", tempG)
+    for p in combinations(list(range(1, n)), k-1):
+        # print(p)
+        temp_matrix = tempG[(p[0]-1)*alpha:p[0]*alpha, :]
+        for i in range(1, k-1):
+            temp_matrix = Matrix([temp_matrix, tempG[(p[i]-1)*alpha:alpha*p[i], :]])
+        temp_matrix = Matrix([temp_matrix, newcomer])
+        temp_matrix = tiny_binary_operation(temp_matrix)
+        # print("temp_matrix", temp_matrix)
+        det = temp_matrix.det()
+        # print("det", det)
+        if det == 0:
+            fail = 0
+            # print("before binary operation", det)
+            # print("after binary operation", binary_operation(det))
+            break
+    # print(fail)
+    if fail == 0:
+        # print("This time fails")
+        # print("This time fails, Z is", Z, "newcomer is: ", newcomer)
+        return 0
+    else:
+        return 1
 
 
 
@@ -545,18 +596,32 @@ def test_repair_2(num, G, k):
         result[key] = result.get(key, 0) + 1
     print("There are B times we need random Z for A times to repair, A:B", result)
 
+def test_repair_4_block(num, G, k):
+    # print("This time we try ", num, "times.")
+    count = 0
+    row = G.rows
+    col = G.cols
+    for i in range(num):
+        print("This is turn ", i, "in calculating matrix with size ", row, col)
+        if repair_4_block(G, k) == 1:
+            count = count + 1
+    return count/num
+
+
+
 
 
 if __name__ == "__main__":
 
+
     # test 1
     # print("The success probability for G24_8_block is: ", test_repair_1_block(100, scratch_3.G24_8_block, 2))  # 0.79
     # print("The success probability for G24_15_block is: ", test_repair_1_block(100, scratch_3.G24_15_block, 5))   # 0.94
-    # print("The success probability for G18_14_block is: ", test_repair_1_block(100, scratch_3.G18_14_block, 7))   # 0.95
+    # print("The success probability for G18_14_block is: ", test_repair_1_block(1, scratch_3.G18_14_block, 7))   # 0.95
 
-    # print("The success probability for G8_4 is: ", test_repair_1_block(1, scratch_3.G8_4, 2))   # 0.34  - 0.37 in 200 tries
+    # print("The success probability for G8_4 is: ", test_repair_1_block(100, scratch_3.G8_4, 2))   # 0.34  - 0.37 in 200 tries
     # print("The success probability for G10_6_block is: ", test_repair_1_block(200, scratch_3.G10_6_block, 3))   # 0.525 in 200 tries
-    # print("The success probability for G12_8_block is: ", test_repair_1_block(200, scratch_3.G12_8_block, 4))   # 0.675 in 200 tries
+    print("The success probability for G12_8_block is: ", test_repair_1_block(200, scratch_3.G12_8_block, 4))   # 0.675 in 200 tries
     # print("The success probability for G14_10_block is: ", test_repair_1_block(200, scratch_3.G14_10_block, 5))   # 0.88 in 200 tries
     # print("The success probability for G16_12_block is: ", test_repair_1_block(200, scratch_3.G16_12_block, 6))   # 0.925 in 200 tries
 
@@ -566,7 +631,7 @@ if __name__ == "__main__":
     # print("The success probability for G18_9 is: ", test_repair_1_block(200, scratch_3.G18_9_block, 3))  #   0.815 in 200 tries
     # print("The success probability for G20_16_block is: ", test_repair_1_block(50, scratch_3.G20_16_block, 8))
     # print("The success probability for G21_12_block is: ", test_repair_1_block(100, scratch_3.G21_12_block, 4))   # 0.91
-    # print("The success probability for G32_16_block is: ", test_repair_1_block(50, scratch_3.G32_16_block, 4))   # 0.96
+    # print("The success probability for G32_16_block is: ", test_repair_1_block(1, scratch_3.G32_16_block, 4))   # 0.96
     # print("The success probability for G28_12_block is: ", test_repair_1_block(100, scratch_3.G28_12_block, 3))      # 0.84
     # print("The success probability for G36_20_block is: ", test_repair_1_block(100, scratch_3.G36_20_block, 5))
 
@@ -612,3 +677,26 @@ if __name__ == "__main__":
     # print("For a matrix G28_12", repair_3_block(scratch_3.G28_12_block, 3))    # success
     # print("For a matrix G36_20", repair_3_block(scratch_3.G36_20_block, 5))
 
+
+    # test 4
+
+    # print("The success probability for G8_4 is: ", test_repair_4_block(200, scratch_3.G8_4, 2))   #
+    # print("The success probability for G10_6_block is: ", test_repair_4_block(200, scratch_3.G10_6_block, 3))   #
+    # print("The success probability for G12_8_block is: ", test_repair_4_block(200, scratch_3.G12_8_block, 4))   #
+    # print("The success probability for G14_10_block is: ", test_repair_4_block(200, scratch_3.G14_10_block, 5))   #
+    # print("The success probability for G16_12_block is: ", test_repair_4_block(100, scratch_3.G16_12_block, 6))   #
+    #
+    # print("The success probability for G24_8_block is: ", test_repair_4_block(100, scratch_3.G24_8_block, 2))  #
+    # print("The success probability for G24_15_block is: ", test_repair_4_block(100, scratch_3.G24_15_block, 5))  #
+    # print("The success probability for G18_14_block is: ", test_repair_4_block(100, scratch_3.G18_14_block, 7))  #
+
+
+    # print("The success probability for G15_6 is: ", test_repair_4_block(100, scratch_3.G15_6_block, 2))  #
+    # print("The success probability for G18_9 is: ", test_repair_4_block(100, scratch_3.G18_9_block, 3))  #
+    # print("The success probability for G20_16_block is: ", test_repair_4_block(100, scratch_3.G20_16_block, 8))
+    # print("The success probability for G21_12_block is: ", test_repair_4_block(100, scratch_3.G21_12_block, 4))   #
+    # print("The success probability for G28_12_block is: ", test_repair_4_block(40, scratch_3.G28_12_block, 3))      #
+    # print("The success probability for G24_15_block is: ", test_repair_4_block(40, scratch_3.G24_15_block, 5))  #
+    # print("The success probability for G32_16_block is: ", test_repair_4_block(30, scratch_3.G32_16_block, 4))   #
+    #
+    # print("The success probability for G36_20_block is: ", test_repair_4_block(30, scratch_3.G36_20_block, 5))
