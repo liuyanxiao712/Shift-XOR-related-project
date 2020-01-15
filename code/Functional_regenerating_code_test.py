@@ -71,29 +71,21 @@ def generate_Z(alpha, d):
     return Z
 
 def test_mds(G):
-
     row = G.rows
     col = G.cols
     items = list(range(1, row+1))
-    fail = 1
+    failure = 1
     for q in combinations(items, col):
-        print(q)
-        new_matrix = G[q[0]-1:q[0], :]
+        temp_matrix = G[q[0]-1:q[0], :]
         for i in range(1, col):
-            new_matrix = Matrix([new_matrix, G[q[i]-1:q[i], :]])
-        # print("new_matrix", new_matrix)
-        print(new_matrix)
-        det = new_matrix.det()
-        print(det)
-        print(binary_operation(det))
-        if binary_operation(det) == 0:
-            fail = 0
-        print(fail)
-        # print(fail)
-    if fail == 0:
-        return 0 # fail
-    else:
-        return 1 # success
+            temp_matrix = Matrix([temp_matrix, G[q[i]-1:q[i], :]])
+        det = temp_matrix.det()
+        if det == 0:
+            failure = 0   # fail
+            break
+            return 0
+    if failure == 1:
+        return 1   # success
 
 def test_mds_block(G, k):
     row = G.rows
@@ -253,7 +245,7 @@ def repair_1_block(G, k):
     """ Totally random b, Z, d and fail_node, try to see if success
     :param G: matrix to be repaired, failed node is randomly chosen in this marix
     :param k: originally we have k nodes
-    :return: 0 to fail and 1 to success
+    :return: 0 is fail and 1 is success
     """
     # print("G", G)
     row = G.rows
@@ -261,7 +253,7 @@ def repair_1_block(G, k):
     alpha = col // k
     n = row // alpha
     d = alpha + k - 1
-    fail_node = random.randint(1,n)
+    fail_node = random.randint(1, n)
     Z = generate_Z(alpha, d)
     # print(row, col, alpha, n, d, fail_node, Z)
 
@@ -447,8 +439,9 @@ def repair_2_block(G, k):
 
 def repair_3_block(G, k):
     """
-    Make sure for a matrix, each node fails, we can random b and Z to repair it.
-    Iterate all failure possibilities to see if we can repair
+    Make sure for a matrix, whichever a node fails, we can random b and Z to repair it.
+    Iterate all failure possibilities to see if we can always successfully repair.
+    Detail: For any 1 node fails, we access ANY d out of remaining nodes, can repair it in several random rounds.
     :param G: Original encoding matrix
     :param k: Number of nodes needed to recover
     :return: 0 to fail and 1 to success
@@ -461,8 +454,7 @@ def repair_3_block(G, k):
     count = 0
     fail = 0
     for i in range(1, k+1):
-        print(i)
-        temp_G = Matrix([G[0:(i-1)*alpha,:], G[i*alpha:, :]])
+        temp_G = Matrix([G[0:(i-1)*alpha, :], G[i*alpha:, :]])
         for p in combinations(list(range(1, n)), d):
             count2 = 0
             while fail == 0 and count2 <= 50:
@@ -479,7 +471,7 @@ def repair_3_block(G, k):
                 break
         if fail == 0:
             break
-        if fail == 1:
+        elif fail == 1:
             count = count + 1
     if count == k:
         print("---------------------For matrix ", G.rows, "*", G.cols, "we can successfully repair above matrix, no matter which node fails----------------------")
