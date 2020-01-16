@@ -314,18 +314,23 @@ def multi_repair_3_block(G, k, N):
     n = row // alpha
     d = alpha + k - 1
     count = 0
-    fail = 0
+
     try_time = 20
 
     # 在每一轮中，对于每一个node out of n，是不是ANY d nodes can repair，尝试足够多的random repair。如果是，再把这个node替换掉进入下一轮。
     # 确认是否有可能对于某个node死掉，在下一轮存在一个node修不回来了
+
+
     current_matrix = G
     for t in range(N):
+        print("This is round ", t)
+        print("current_matrix is", G)
+        print("Row of current_matrix is ", current_matrix.rows, "Col of current_matrix is ", current_matrix.cols)
         for i in range(1, n + 1):
-            print(i, "i")
             for p in combinations(list(range(1, n)), d):
                 count2 = 0
-                print(p)
+                fail = 0
+                print("p", p)
                 while fail == 0 and count2 <= try_time:
                     print("This is when count2 = ", count2, " and we still fail")
                     Z = Functional_regenerating_code_test.generate_Z(alpha, d)
@@ -348,15 +353,18 @@ def multi_repair_3_block(G, k, N):
                         if det == 0:
                             fail2 = 0
                             break
-                    if fail2 == 0: # repair fails
+                    if fail2 == 0:   # repair fails
                         fail = 0
                     elif fail2 == 1:
                         fail = 1
 
                 if fail == 0:
                     break
+                else:
+                    print("In turn p: ", p, "we succeed")
             if fail == 1:
                 count = count + 1
+        print("count", count)
         if count == n:
             fail_node = random.randint(1, n)
             access_nodes = set()
@@ -385,7 +393,7 @@ def multi_repair_3_block(G, k, N):
                     for i in range(1, (k - 1)*alpha):
                         temp_matrix = Matrix([temp_matrix, temp_G[(p[i] - 1):p[i], :]])
                     temp_matrix = Matrix([temp_matrix, newcomer])
-                    print(temp_matrix.rows, temp_matrix.cols)
+                    # print(temp_matrix.rows, temp_matrix.cols)
 
                     det = temp_matrix.det()
                     if det == 0:
@@ -394,7 +402,7 @@ def multi_repair_3_block(G, k, N):
 
                 if fail3 == 1:
                     failure = 1
-                    current_matrix = temp_matrix
+                    current_matrix = Matrix([temp_G, newcomer])
                 else:
                     failure = 0
                     count3 = count3 + 1
@@ -405,13 +413,8 @@ def multi_repair_3_block(G, k, N):
 
 
         if t == N-1:
+            print("Not t is: ", t)
             print("Survive!Cheers!")
-
-
-
-
-
-
 
 
 
@@ -447,4 +450,4 @@ if __name__ == "__main__":
 
 
     # test Multi_3
-    print("For a matrix G8_4", multi_repair_3_block(MDS_matrix_library.G8_4, 2, 500))   # success
+    print("For a matrix G8_4", multi_repair_3_block(MDS_matrix_library.G10_6_block, 3, 20))   # success
