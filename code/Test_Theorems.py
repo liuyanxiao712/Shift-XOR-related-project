@@ -371,7 +371,7 @@ def multi_repair_3_block(G, k, N):
                 access_matrix = Matrix([access_matrix, Functional_regenerating_code_test.generate_b_row_vector(alpha) * current_matrix[(access_nodes[i] - 1) * alpha:
                                                                                       access_nodes[i] * alpha, :]])
 
-            tempG = Matrix([current_matrix[0:(fail_node - 1) * alpha, :], current_matrix[fail_node * alpha:, :]])
+            temp_G = Matrix([current_matrix[0:(fail_node - 1) * alpha, :], current_matrix[fail_node * alpha:, :]])
 
             failure = 0  # to check if this repair success or not
             count3 = 0
@@ -382,9 +382,10 @@ def multi_repair_3_block(G, k, N):
                 fail3 = 1
                 for p in combinations(list(range(1, (n-1)*alpha)), (k - 1)*alpha):
                     temp_matrix = temp_G[(p[0] - 1):p[0], :]
-                    for i in range(1, k - 1):
+                    for i in range(1, (k - 1)*alpha):
                         temp_matrix = Matrix([temp_matrix, temp_G[(p[i] - 1):p[i], :]])
                     temp_matrix = Matrix([temp_matrix, newcomer])
+                    print(temp_matrix.rows, temp_matrix.cols)
 
                     det = temp_matrix.det()
                     if det == 0:
@@ -399,11 +400,13 @@ def multi_repair_3_block(G, k, N):
                     count3 = count3 + 1
 
         if count3 >= try_time:
+            print("In round", t + 1, "we fail")
             break
-            print("In round", t+1, "we fail")
+
 
         if t == N-1:
             print("Survive!Cheers!")
+
 
 
 
@@ -444,4 +447,4 @@ if __name__ == "__main__":
 
 
     # test Multi_3
-    print("For a matrix G8_4", multi_repair_3_block(MDS_matrix_library.G8_4, 2, 1))   # success
+    print("For a matrix G8_4", multi_repair_3_block(MDS_matrix_library.G8_4, 2, 500))   # success
