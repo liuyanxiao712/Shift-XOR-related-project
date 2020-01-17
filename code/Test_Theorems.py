@@ -299,6 +299,61 @@ def multi_repair_block_1(G, k, N):
         return 1
 
 def test_coverall_hamming_w(G, k, N):
+    row = G.rows
+    col = G.cols
+    alpha = col // k
+    n = row // alpha
+    d = alpha + k - 1
+
+
+
+    H = eye(row)
+    count = 1
+    for t in range(N):
+        fail_node = random.randint(1, n)
+
+        access_nodes = set()
+        while len(access_nodes) < d:
+            access_nodes.add(random.randint(1, n))
+            if fail_node in access_nodes:
+                access_nodes.remove(fail_node)
+        access_nodes = list(access_nodes)
+
+        b = []
+        b1 = Functional_regenerating_code_test.generate_b_row_vector(alpha)
+        b.append(b1)
+        for i in range(1, d):
+            bi = Functional_regenerating_code_test.generate_b_row_vector(alpha)
+            b.append(bi)
+
+        Z = Functional_regenerating_code_test.generate_Z(alpha, d)
+
+        access_H = Matrix([H[0:(fail_node - 1)*alpha, :], H[fail_node*alpha: , :]])
+
+        # alpha * n(alpha) matrix denoting "helpers"
+        H_helpers = b[0] * access_H[access_nodes[0] * alpha: (access_nodes[0] + 1) * alpha, :]
+        for i in range(1, d):
+            H_helpers = Matrix([H_sub, b[i] * access_H[(access_nodes[i] - 1) * alpha: access_nodes[i] * alpha, :]])
+
+        #   Now use Z*H_helpers to calculate H_new denoting the "newcomer"
+        H_new = Z * H_helpers
+
+        #   Update H
+        H = Matrix([access_H, H_new])
+
+        #   To calculate if H is still full rank: if full rank, this round we success
+        #   Because of our theorem, we can calculate H directly without bothering G
+        rank = H.rank()
+        if rank != row:   #   we success in this round
+            print("We fail in round ", t+1)
+            break
+        else:
+            print("We success in round ", t+1, "Let's go to next round")
+            count = count + 1
+
+    if count >= N:
+        print("We survive! Cheers!")
+
 
 
 
