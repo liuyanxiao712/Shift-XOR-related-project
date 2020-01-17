@@ -298,6 +298,14 @@ def multi_repair_block_1(G, k, N):
     else:
         return 1
 
+def test_coverall_hamming_w(G, k, N):
+
+
+
+
+
+
+
 
 def multi_repair_3_block(G, k, N):
     """
@@ -320,19 +328,19 @@ def multi_repair_3_block(G, k, N):
     # 在每一轮中，对于每一个node out of n，是不是ANY d nodes can repair，尝试足够多的random repair。如果是，再把这个node替换掉进入下一轮。
     # 确认是否有可能对于某个node死掉，在下一轮存在一个node修不回来了
 
-
     current_matrix = G
     for t in range(N):
-        print("This is round ", t)
-        print("current_matrix is", G)
+        print("This is round ", t+1)
+        print("Now the current matrix we are testing is ", current_matrix)
         print("Row of current_matrix is ", current_matrix.rows, "Col of current_matrix is ", current_matrix.cols)
         for i in range(1, n + 1):
+            print("This is to test node ", i)
             for p in combinations(list(range(1, n)), d):
                 count2 = 0
                 fail = 0
                 print("p", p)
                 while fail == 0 and count2 <= try_time:
-                    print("This is when count2 = ", count2, " and we still fail")
+                    print("In combination ", p, "we are trying time ", count2+1)
                     Z = Functional_regenerating_code_test.generate_Z(alpha, d)
 
                     temp_G = Matrix([current_matrix[0:(i - 1) * alpha, :], current_matrix[i * alpha:, :]])
@@ -342,6 +350,7 @@ def multi_repair_3_block(G, k, N):
                             [access_matrix, Functional_regenerating_code_test.generate_b_row_vector(alpha) * temp_G[(p[j] - 1) * alpha: p[j] * alpha, :]])
 
                     newcomer = Functional_regenerating_code_test.tiny_binary_operation(Z * access_matrix)
+                    print("The newcomer is ", newcomer)
 
                     fail2 = 1
                     for q in combinations(list(range(1, (n-1)*alpha)), (k - 1)*alpha):
@@ -355,17 +364,21 @@ def multi_repair_3_block(G, k, N):
                             break
                     if fail2 == 0:   # repair fails
                         fail = 0
+                        count2 = count2 + 1
                     elif fail2 == 1:
+                        print("MDS is protected")
                         fail = 1
 
                 if fail == 0:
+                    print("Now we cannot fix this node")
                     break
                 else:
                     print("In turn p: ", p, "we succeed")
             if fail == 1:
                 count = count + 1
-        print("count", count)
+
         if count == n:
+            print("In round ", t+1, "MDS is protected, now we can going to next round")
             fail_node = random.randint(1, n)
             access_nodes = set()
             while len(access_nodes) < d:
@@ -386,6 +399,7 @@ def multi_repair_3_block(G, k, N):
             while failure == 0 and count3 <= try_time:
                 Z = Functional_regenerating_code_test.generate_Z(alpha, d)
                 newcomer = Functional_regenerating_code_test.tiny_binary_operation(Z * access_matrix)
+                print("To come to next round, newcomer is", newcomer)
 
                 fail3 = 1
                 for p in combinations(list(range(1, (n-1)*alpha)), (k - 1)*alpha):
@@ -405,17 +419,15 @@ def multi_repair_3_block(G, k, N):
                     current_matrix = Matrix([temp_G, newcomer])
                 else:
                     failure = 0
+                    print("Oh this newcomer is bad, let's try one more time")
                     count3 = count3 + 1
 
         if count3 >= try_time:
             print("In round", t + 1, "we fail")
             break
 
-
         if t == N-1:
-            print("Not t is: ", t)
-            print("Survive!Cheers!")
-
+            print("After ", N, "round we survive! Cheers!")
 
 
 
@@ -450,4 +462,6 @@ if __name__ == "__main__":
 
 
     # test Multi_3
-    print("For a matrix G8_4", multi_repair_3_block(MDS_matrix_library.G10_6_block, 3, 20))   # success
+    print("For a matrix G8_4", multi_repair_3_block(MDS_matrix_library.G8_4, 2, 3))
+    # print("For a matrix G10_6", multi_repair_3_block(MDS_matrix_library.G10_6_block, 3, 3))
+    # print("For a matrix G12_8", multi_repair_3_block(MDS_matrix_library.G12_8_block, 4, 100))# success
