@@ -298,6 +298,7 @@ def multi_repair_block_1(G, k, N):
     else:
         return 1
 
+
 def test_coverall_hamming_w(G, k, N):
     row = G.rows
     col = G.cols
@@ -305,12 +306,11 @@ def test_coverall_hamming_w(G, k, N):
     n = row // alpha
     d = alpha + k - 1
 
-
-
     H = eye(row)
     count = 1
     for t in range(N):
         fail_node = random.randint(1, n)
+        print("failed node", fail_node)
 
         access_nodes = set()
         while len(access_nodes) < d:
@@ -318,6 +318,7 @@ def test_coverall_hamming_w(G, k, N):
             if fail_node in access_nodes:
                 access_nodes.remove(fail_node)
         access_nodes = list(access_nodes)
+        print("access_nodes", access_nodes)
 
         b = []
         b1 = Functional_regenerating_code_test.generate_b_row_vector(alpha)
@@ -325,31 +326,63 @@ def test_coverall_hamming_w(G, k, N):
         for i in range(1, d):
             bi = Functional_regenerating_code_test.generate_b_row_vector(alpha)
             b.append(bi)
+        print("bs", b)
 
         Z = Functional_regenerating_code_test.generate_Z(alpha, d)
+        print("Z", Z)
 
-        access_H = Matrix([H[0:(fail_node - 1)*alpha, :], H[fail_node*alpha: , :]])
+        remained_H = Matrix([H[0:(fail_node - 1)*alpha, :], H[fail_node*alpha: , :]])
+        print("remained_H", remained_H)
 
         # alpha * n(alpha) matrix denoting "helpers"
-        H_helpers = b[0] * access_H[access_nodes[0] * alpha: (access_nodes[0] + 1) * alpha, :]
+        H_helpers = b[0] * H[(access_nodes[0]-1) * alpha: access_nodes[0] * alpha, :]
         for i in range(1, d):
-            H_helpers = Matrix([H_sub, b[i] * access_H[(access_nodes[i] - 1) * alpha: access_nodes[i] * alpha, :]])
+            H_helpers = Matrix([H_helpers, b[i] * H[(access_nodes[i] - 1) * alpha: access_nodes[i] * alpha, :]])
+        print("H_helpers", H_helpers)
 
         #   Now use Z*H_helpers to calculate H_new denoting the "newcomer"
         H_new = Z * H_helpers
 
-        #   Update H
-        H = Matrix([access_H, H_new])
+        a = np.random.randint(2, size=row)
+        for i in range(row):
+            H_new[i] = a[i]
+            if a[i] == 0:
+                H_new[row + i] = 1
+            elif a[i] == 1:
+                H_new[row + i] = 0
+        # print("H new before", H_new)
+        for i in range(alpha):
+            H_new[(fail_node*alpha) - 2 + i] = 0
+            H_new[(fail_node*alpha) + row - 2 + i] = 0
 
-        #   To calculate if H is still full rank: if full rank, this round we success
-        #   Because of our theorem, we can calculate H directly without bothering G
-        rank = H.rank()
-        if rank != row:   #   we success in this round
-            print("We fail in round ", t+1)
+        print("H_new",H_new)
+
+        #   Update H
+        H = Matrix([remained_H, H_new])
+        print("Now we are using this H", H)
+
+        # test H is MDS
+        fail = 1
+        for p in combinations(list(range(1, (n - 1))), (k - 1) ):
+            print(p)
+            # print("remained_H", remained_H)
+            temp_matrix = remained_H[(p[0]-1)*alpha:p[0]*alpha, :]
+            for i in range(1, (k - 1) ):
+                temp_matrix = Matrix([temp_matrix, remained_H[(p[i] - 1)*alpha:p[i]*alpha, :]])
+            temp_matrix = Matrix([temp_matrix, H_new])
+            rank = temp_matrix.rank()
+            if rank != k * alpha:
+                fail = 0
+                print("This H is not MDS, its rank is", H.rank())
+                break
+
+        if fail == 0:
+            print("We fail in round ", t + 1)
             break
-        else:
-            print("We success in round ", t+1, "Let's go to next round")
+        elif fail == 1: # success
+            print("We success in round ", t + 1, "Let's go to next round")
             count = count + 1
+
 
     if count >= N:
         print("We survive! Cheers!")
@@ -378,7 +411,7 @@ def multi_repair_3_block(G, k, N):
     d = alpha + k - 1
     count = 0
 
-    try_time = 20
+    try_time = 40
 
     # 在每一轮中，对于每一个node out of n，是不是ANY d nodes can repair，尝试足够多的random repair。如果是，再把这个node替换掉进入下一轮。
     # 确认是否有可能对于某个node死掉，在下一轮存在一个node修不回来了
@@ -386,7 +419,7 @@ def multi_repair_3_block(G, k, N):
     current_matrix = G
     for t in range(N):
         print("This is round ", t+1)
-        print("Now the current matrix we are testing is ", current_matrix)
+        # print("Now the current matrix we are testing is ", current_matrix)
         print("Row of current_matrix is ", current_matrix.rows, "Col of current_matrix is ", current_matrix.cols)
         for i in range(1, n + 1):
             print("This is to test node ", i)
@@ -405,7 +438,7 @@ def multi_repair_3_block(G, k, N):
                             [access_matrix, Functional_regenerating_code_test.generate_b_row_vector(alpha) * temp_G[(p[j] - 1) * alpha: p[j] * alpha, :]])
 
                     newcomer = Functional_regenerating_code_test.tiny_binary_operation(Z * access_matrix)
-                    print("The newcomer is ", newcomer)
+                    # print("The newcomer is ", newcomer)
 
                     fail2 = 1
                     for q in combinations(list(range(1, (n-1)*alpha)), (k - 1)*alpha):
@@ -421,7 +454,7 @@ def multi_repair_3_block(G, k, N):
                         fail = 0
                         count2 = count2 + 1
                     elif fail2 == 1:
-                        print("MDS is protected")
+                        # print("MDS is protected")
                         fail = 1
 
                 if fail == 0:
@@ -517,6 +550,5 @@ if __name__ == "__main__":
 
 
     # test Multi_3
-    print("For a matrix G8_4", multi_repair_3_block(MDS_matrix_library.G8_4, 2, 3))
-    # print("For a matrix G10_6", multi_repair_3_block(MDS_matrix_library.G10_6_block, 3, 3))
-    # print("For a matrix G12_8", multi_repair_3_block(MDS_matrix_library.G12_8_block, 4, 100))# success
+    print("For a matrix G8_4", multi_repair_3_block(MDS_matrix_library.G8_4, 2, 300))
+    # test_coverall_hamming_w(MDS_matrix_library.G8_4, 2, 10)
