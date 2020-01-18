@@ -87,19 +87,19 @@ def test_mds(G):
     if failure == 1:
         return 1   # success
 
+
 def test_mds_block(G, k):
     row = G.rows
     col = G.cols
     alpha = col // k
     n = row // alpha
     # d = alpha + k - 1
-    items = list(range(1, n+1))
     fail = 1
-    for q in combinations(items, k):
+    for q in combinations(list(range(1, n+1)), k):
         # print(q)
         new_matrix = G[(q[0]-1)*alpha:q[0]*alpha, :]
         for i in range(1, k):
-            new_matrix =Matrix([new_matrix, G[(q[i]-1)*alpha:q[i]*alpha, :]])
+            new_matrix = Matrix([new_matrix, G[(q[i]-1)*alpha:q[i]*alpha, :]])
         det = new_matrix.det()
         # print(det)
         if binary_operation(det) == 0:

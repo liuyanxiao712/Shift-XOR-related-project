@@ -298,6 +298,34 @@ def multi_repair_block_1(G, k, N):
     else:
         return 1
 
+def coverall_hamming_w(H, n):
+    """
+    This is used to randomly generate a new H
+    whose newcomer's all Hamming weight is covered,
+    after randomly one node fails
+    :param H: Original H, H should be a square matrix
+    :param n: Number of all nodes
+    :return: New H
+    """
+    row = H.rows
+    alpha = row // n
+    fail_node = random.randint(1, n)
+    remained_H = Matrix([H[0:(fail_node - 1) * alpha, :], H[fail_node * alpha:, :]])
+
+    H_new = zeros(alpha, n * alpha)
+
+    for i in range(n*alpha):
+        temp_set = []
+        while any(temp_set) is False:
+            temp_set = np.random.randint(2, size=alpha)
+            temp_set = list(temp_set)
+        for j in range(alpha):
+            H_new[i+j*row] = temp_set[j]
+
+    H = Matrix([H_new, remained_H])
+    return H
+
+
 
 def test_coverall_hamming_w(G, k, N):
     row = G.rows
@@ -305,6 +333,7 @@ def test_coverall_hamming_w(G, k, N):
     alpha = col // k
     n = row // alpha
     d = alpha + k - 1
+    try_time = 40
 
     H = eye(row)
     count = 1
@@ -343,46 +372,38 @@ def test_coverall_hamming_w(G, k, N):
         #   Now use Z*H_helpers to calculate H_new denoting the "newcomer"
         H_new = Z * H_helpers
 
-        a = np.random.randint(2, size=row)
-        for i in range(row):
-            H_new[i] = a[i]
-            if a[i] == 0:
-                H_new[row + i] = 1
-            elif a[i] == 1:
-                H_new[row + i] = 0
-        # print("H new before", H_new)
-        for i in range(alpha):
-            H_new[(fail_node*alpha) - 2 + i] = 0
-            H_new[(fail_node*alpha) + row - 2 + i] = 0
+        #   Update H until we success(or until we reach largest try time)
+        H = coverall_hamming_w(H, n)
+        count1 = 0
+        while Functional_regenerating_code_test.test_mds_block(H, n) == 0 and count1 <= try_time:
+            H = coverall_hamming_w(H, n)
+            count1 = count1 + 1
 
-        print("H_new",H_new)
-
-        #   Update H
-        H = Matrix([remained_H, H_new])
         print("Now we are using this H", H)
 
         # test H is MDS
-        fail = 1
-        for p in combinations(list(range(1, (n - 1))), (k - 1) ):
-            print(p)
-            # print("remained_H", remained_H)
-            temp_matrix = remained_H[(p[0]-1)*alpha:p[0]*alpha, :]
-            for i in range(1, (k - 1) ):
-                temp_matrix = Matrix([temp_matrix, remained_H[(p[i] - 1)*alpha:p[i]*alpha, :]])
-            temp_matrix = Matrix([temp_matrix, H_new])
-            rank = temp_matrix.rank()
-            if rank != k * alpha:
-                fail = 0
-                print("This H is not MDS, its rank is", H.rank())
-                break
+        # fail = 1
+        # for p in combinations(list(range(1, (n - 1))), (k - 1)):
+        #     print(p)
+        #     # print("remained_H", remained_H)
+        #     temp_matrix = remained_H[(p[0]-1)*alpha:p[0]*alpha, :]
+        #     for i in range(1, (k - 1) ):
+        #         temp_matrix = Matrix([temp_matrix, remained_H[(p[i] - 1)*alpha:p[i]*alpha, :]])
+        #     temp_matrix = Matrix([temp_matrix, H_new])
+        #     rank = temp_matrix.rank()
+        #     if rank != k * alpha:
+        #         fail = 0
+        #         print("This H is not MDS, its rank is", H.rank())
+        #         break
 
-        if fail == 0:
+        # test if H is MDS directly
+        if Functional_regenerating_code_test.test_mds_block(H, n) == 0:
+            print("This H is not MDS, its rank is", H.rank())
             print("We fail in round ", t + 1)
             break
-        elif fail == 1: # success
+        else:
             print("We success in round ", t + 1, "Let's go to next round")
             count = count + 1
-
 
     if count >= N:
         print("We survive! Cheers!")
@@ -550,5 +571,5 @@ if __name__ == "__main__":
 
 
     # test Multi_3
-    print("For a matrix G8_4", multi_repair_3_block(MDS_matrix_library.G8_4, 2, 300))
-    # test_coverall_hamming_w(MDS_matrix_library.G8_4, 2, 10)
+    # print("For a matrix G8_4", multi_repair_3_block(MDS_matrix_library.G10_6_block, 3, 200))
+    test_coverall_hamming_w(MDS_matrix_library.G10_6_block, 3, 100)
