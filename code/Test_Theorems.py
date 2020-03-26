@@ -4,6 +4,7 @@ Normally if tests are passed, we continue to focusing on theoretical proofs.
 Globally, 1 means success and 0 means fail
 """
 
+
 from sympy import symbols, Matrix
 from sympy.matrices import randMatrix, zeros, eye
 from itertools import combinations
@@ -24,14 +25,14 @@ def generate_strong_Z(alpha, d):
     """
     k = d+1-alpha
     Z = zeros(alpha, d)
-    # print("Z",Z)
     for i in range(alpha):
         N = random.randint(k, d)   # N is the number of element "1" in this row
         randNs = random.sample(range(d), N)
-        # print(randNs)
         for j in range(N):
             t = randNs[j]
             Z[i, t] = 1
+    while Z.rank() != alpha:
+        generate_strong_Z(alpha, d)
     return Z
 
 
@@ -70,7 +71,6 @@ def repair_1_block_strong(G, k):
     newcomer = Z * access_matrix
     newcomer = Functional_regenerating_code_test.tiny_binary_operation(newcomer)
     print("newcomer", newcomer)
-
 
     fail = 1
     tempG = Matrix([G[0:(fail_node - 1)*alpha, :], G[fail_node*alpha:, :]])
@@ -176,16 +176,12 @@ def test_Theorm2(num, G, k):
             count = count + 1
     return count/num
 
-# Test for multi-repair
 
+# Test for multi-repair
 def multi_repair_1(G, k, N):
     """
     This is to test multi-round repairs, corresponding to repair_1
     Each round random once, to check the success rate after N rounds
-    :param G:
-    :param k:
-    :param N: number of repair rounds
-    :return:
     """
     row = G.rows
     col = G.cols
@@ -193,26 +189,27 @@ def multi_repair_1(G, k, N):
     n = row // alpha
     d = alpha + k - 1
 
-    fail = 1
+    fail = 1  # fail = 1 means success and fail = 0 means fail
 
     repaired_matrix = G
-    # print(row, col, alpha,n,d)
 
     for t in range(N):
-        fail_node = random.randint(1, n)
+        fail_node = random.randint(1, n)  # randomly fail a node in each round
 
         access_nodes = set()
         while len(access_nodes) < d:
             access_nodes.add(random.randint(1, n))
             if fail_node in access_nodes:
                 access_nodes.remove(fail_node)
-        access_nodes = list(access_nodes)
+        access_nodes = list(access_nodes)  # nodes we access when we repair
 
-        access_matrix = Functional_regenerating_code_test.generate_b_row_vector(alpha) * repaired_matrix[(access_nodes[0] - 1) * alpha: access_nodes[0] * alpha, :]
+        access_matrix = Functional_regenerating_code_test.generate_b_full_rank(alpha) * repaired_matrix[(access_nodes[0] - 1) * alpha: access_nodes[0] * alpha, :]
         for i in range(1, d):
-            access_matrix = Matrix([access_matrix, Functional_regenerating_code_test.generate_b_row_vector(alpha) * repaired_matrix[(access_nodes[i] - 1) * alpha:
+            access_matrix = Matrix([access_matrix, Functional_regenerating_code_test.generate_b_full_rank(alpha) * repaired_matrix[(access_nodes[i] - 1) * alpha:
                                                                                     access_nodes[i] * alpha, :]])
-        Z = Functional_regenerating_code_test.generate_Z(alpha, d)
+
+        # Z = Functional_regenerating_code_test.generate_Z(alpha, d)
+        Z = generate_strong_Z(alpha, d)
         newcomer = Z * access_matrix
         newcomer = Functional_regenerating_code_test.tiny_binary_operation(newcomer)
 
@@ -236,8 +233,20 @@ def multi_repair_1(G, k, N):
 
     if fail == 0:
         return 0
-    else:
+    elif fail == 1:
         return 1
+
+
+def test_Multi_repair_1(num, G, k, N):
+    print("This time we try ", num, "times.")
+    count = 0
+    row = G.rows
+    col = G.cols
+    for i in range(num):
+        print("This is turn ", i, "in calculating matrix with size ", row, col)
+        if multi_repair_1(G, k, N) == 1:
+            count = count + 1
+    return count / num
 
 
 def multi_repair_block_1(G, k, N):
@@ -258,7 +267,6 @@ def multi_repair_block_1(G, k, N):
     fail = 1
 
     repaired_matrix = G
-    # print(row, col, alpha,n,d)
 
     for t in range(N):
         fail_node = random.randint(1, n)
@@ -298,6 +306,7 @@ def multi_repair_block_1(G, k, N):
     else:
         return 1
 
+
 def coverall_hamming_w(H, n):
     """
     This is used to randomly generate a new H
@@ -324,7 +333,6 @@ def coverall_hamming_w(H, n):
 
     H = Matrix([H_new, remained_H])
     return H
-
 
 
 def test_coverall_hamming_w(G, k, N):
@@ -407,13 +415,6 @@ def test_coverall_hamming_w(G, k, N):
 
     if count >= N:
         print("We survive! Cheers!")
-
-
-
-
-
-
-
 
 
 def multi_repair_3_block(G, k, N):
@@ -540,16 +541,6 @@ def multi_repair_3_block(G, k, N):
 
 
 
-def test_Multi_repair_1(num, G, k, N):
-    print("This time we try ", num, "times.")
-    count = 0
-    row = G.rows
-    col = G.cols
-    for i in range(num):
-        print("This is turn ", i, "in calculating matrix with size ", row, col)
-        if multi_repair_1(G, k, N) == 1:
-            count = count + 1
-    return count / num
 
 def test_Multi_repair_block_1(num, G, k, N):
     print("This time we try ", num, "times.")
@@ -565,11 +556,16 @@ def test_Multi_repair_block_1(num, G, k, N):
 
 
 if __name__ == "__main__":
-    # print("The success probability for G10_6(repair for 1 turn) is: ", test_Multi_repair_1(50, MDS_matrix_library.G10_6_block, 3, 1))
-    # print("The success probability for G10_6(repair for 2 turn) is: ", test_Multi_repair_1(50, MDS_matrix_library.G10_6_block, 3, 2))
+    print(generate_strong_Z(4,5))
+
+    # print("The success probability for G8_4 is: ", test_Multi_repair_1(500, MDS_matrix_library.G8_4, 2, 1))
+    # print("The success probability for G8_4 is: ", test_Multi_repair_1(500, MDS_matrix_library.G8_4, 2, 2))
+    # print("The success probability for G8_4 is: ", test_Multi_repair_1(500, MDS_matrix_library.G8_4, 2, 3))
+
+
     # print("The success probability for G10_6(repair for 3 turn) is: ", test_Multi_repair_1(50, MDS_matrix_library.G10_6_block, 3, 3))
 
 
     # test Multi_3
     # print("For a matrix G8_4", multi_repair_3_block(MDS_matrix_library.G10_6_block, 3, 200))
-    test_coverall_hamming_w(MDS_matrix_library.G10_6_block, 3, 100)
+    # test_coverall_hamming_w(MDS_matrix_library.G10_6_block, 3, 100)

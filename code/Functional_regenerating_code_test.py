@@ -7,10 +7,11 @@ Please mainly use repair_1_block, repair_2_block, repair_3_block
 """
 
 from sympy import symbols, Matrix
-from sympy.matrices import randMatrix, zeros
-import scratch_3
+from sympy.matrices import randMatrix, zeros, ones
+
 from itertools import combinations
 import random
+import MDS_matrix_library
 
 z = symbols('z')
 
@@ -52,23 +53,27 @@ def tiny_binary_operation(G):
     return G
 
 
+def generate_b_full_rank(alpha):
+    """
+    Generate a row vector with all entries 1 and length alpha
+    """
+    b = ones(1, alpha)
+    return b
+
+
 def generate_b_row_vector(alpha):
     b = randMatrix(1, alpha, 0, 1)
     while b.rank() == 0:
         b = randMatrix(1, alpha, 0, 1)
     return b
 
-def generate_b_1_vector(alpha):
-    b = zeros(1, alpha)
-    ran = random.randint(0, alpha-1)
-    b[ran] = 1
-    return b
 
 def generate_Z(alpha, d):
     Z = randMatrix(alpha, d, 0, 1)
     while Z.rank() != alpha:
         Z = randMatrix(alpha, d, 0, 1)
     return Z
+
 
 def test_mds(G):
     row = G.rows
@@ -87,6 +92,33 @@ def test_mds(G):
     if failure == 1:
         return 1   # success
 
+def generate_strong_Z(alpha, d):
+    """
+    This Z satisfies that there are no less than k element "1"  in its each row
+    :param alpha:
+    :param d:
+    :return:
+    """
+    k = d+1-alpha
+    Z = zeros(alpha, d)
+    for i in range(alpha):
+        N = random.randint(k, d)   # N is the number of element "1" in this row
+        randNs = random.sample(range(d), N)
+        for j in range(N):
+            t = randNs[j]
+            Z[i, t] = 1
+    while Z.rank() != alpha:
+        generate_strong_Z(alpha, d)
+    return Z
+
+
+# Z84 = Matrix(2, 3, [1, 1, 1, 1, 1, 0])
+# Z106 = Matrix(2, 4, [1, 1, 1, 1, 1, 1, 1, 0])
+# Z128 = Matrix(2, 5, [1, 1, 1, 1, 1, 1, 1, 0,1,1])
+# Z1410 =Matrix(2, 6, [1, 1, 1, 1, 1, 1,1,1, 1, 0,1,1])
+# Z156= Matrix(3,4, [0, 1, 1, 1, 1, 0, 1, 1, 1,1,0,1])
+# Z189 =Matrix(3,5, [0, 1, 1, 1, 1, 1, 1, 1, 1,1,0,1,1,1,0])
+Z248=Matrix([[1, 0, 0, 1, 1], [0, 0, 1, 1, 1], [0, 1, 1, 1, 0], [0, 0, 1, 1, 0]])
 
 def test_mds_block(G, k):
     row = G.rows
@@ -138,58 +170,6 @@ def generate_mds_block(row, col, k):
             a = 1
     return MDS
 
-def repair_iterate_all(G, k): # This function is used to functionally repair if one node fails
-    """
-    We iterate all combinations of d nodes to repair a newcomer and test MDS property
-    :param G: original matrix
-    :param k: k
-    :return: success ratio
-    """
-    row = G.rows
-    col = G.cols
-    alpha = col // k
-    n = row // alpha
-    d = alpha + k - 1
-    # fail_node = random.randint(1,n)
-    # for i in range(alpha):
-    #     fail_matrix = G.row_del((fail_node-1)*alpha)
-
-    # print("row: ", row, "col:", col, "alpha:", alpha, "n:", n, "d:", d)
-    items = []
-    for i in range(1,n+1):
-        items.append(i)
-    number2 = 0
-    number1 = 0
-    for q in combinations(items, d):
-        items = []
-        for i in range(d):
-            items.append(q[i])
-        number1 = number1 + 1
-        other_matrices = G[q[0] * alpha:(q[0] + 1) * alpha, :]
-        # new_matrix = generate_b_row_vector(alpha) * G[q[0]*alpha:(q[0]+1)*alpha, :]
-        new_matrix = generate_b_row_vector(alpha) * other_matrices
-        for i in range(1, d):
-            p = q[i]
-            other_matrices = Matrix([other_matrices, G[(p-1)*alpha:p*alpha, :]])
-            new_matrix = Matrix([new_matrix, generate_b_row_vector(alpha) * G[(p-1)*alpha:p*alpha, :]])
-            # for i in range(new_matrix.rows - 1):
-            #     new_matrix[0:1, :] = new_matrix[0:1, :] + new_matrix[1:2, :]
-            #     new_matrix.row_del(1)
-        new_matrix = binary_operation(new_matrix)
-        other_matrices = binary_operation(other_matrices)
-        # print("new_matrix",new_matrix)
-        Z = generate_Z(alpha, d)
-        # print("Z:", Z)
-        repaired = binary_operation(Z * new_matrix)
-        other_matrices = Matrix([other_matrices, repaired])
-        # print("repaired", repaired)
-        a = test_mds(other_matrices)
-        if a is True:
-            number2 = number2 + 1
-        else:
-            print("This time fails", "new_matrix is ",new_matrix, "Z is", Z, "repaired is: ", repaired)
-            break
-    return number2/number1
 
 def repair_1(G, k):
     """ Totally random b, Z, d and fail_node, try to see if success
@@ -254,7 +234,8 @@ def repair_1_block(G, k):
     n = row // alpha
     d = alpha + k - 1
     fail_node = random.randint(1, n)
-    Z = generate_Z(alpha, d)
+    # Z = generate_strong_Z(alpha, d)
+    Z = Z248
     # print(row, col, alpha, n, d, fail_node, Z)
 
     access_nodes = set()
@@ -265,10 +246,10 @@ def repair_1_block(G, k):
     access_nodes = list(access_nodes)
     # print("access_nodes", access_nodes)
 
-    access_matrix = generate_b_row_vector(alpha) * G[(access_nodes[0]-1) * alpha: access_nodes[0] * alpha, :]
+    access_matrix = generate_b_full_rank(alpha) * G[(access_nodes[0]-1) * alpha: access_nodes[0] * alpha, :]
 
     for i in range(1, d):
-        access_matrix = Matrix([access_matrix, generate_b_row_vector(alpha) * G[(access_nodes[i]-1)*alpha: access_nodes[i]*alpha, :]])
+        access_matrix = Matrix([access_matrix, generate_b_full_rank(alpha) * G[(access_nodes[i]-1)*alpha: access_nodes[i]*alpha, :]])
     # print("access_matrix", access_matrix)
     newcomer = Z * access_matrix
     newcomer = tiny_binary_operation(newcomer)
@@ -300,7 +281,6 @@ def repair_1_block(G, k):
         if det == 0:
             fail = 0
             break
-    # print(fail)
 
     if fail == 0:
         return 0
@@ -600,28 +580,26 @@ def test_repair_4_block(num, G, k):
 
 if __name__ == "__main__":
 
-
     # test 1
 
-
-    # print("The success probability for G8_4 is: ", test_repair_1_block(100, scratch_3.G8_4, 2))   # 0.11
-    # print("The success probability for G10_6_block is: ", test_repair_1_block(100, scratch_3.G10_6_block, 3))   # 0.525 in 200 tries
-    # print("The success probability for G12_8_block is: ", test_repair_1_block(100, scratch_3.G12_8_block, 4))   # 0.675 in 200 tries
-    # print("The success probability for G14_10_block is: ", test_repair_1_block(100, scratch_3.G14_10_block, 5))   # 0.88 in 200 tries
-    # print("The success probability for G16_12_block is: ", test_repair_1_block(100, scratch_3.G16_12_block, 6))   # 0.925 in 200 tries
+    # print("The success probability for G8_4 is: ", test_repair_1_block(100, MDS_matrix_library.G8_4, 2))   # 0.11
+    # print("The success probability for G10_6_block is: ", test_repair_1_block(100, MDS_matrix_library.G10_6_block, 3))   # 0.525 in 200 tries
+    # print("The success probability for G12_8_block is: ", test_repair_1_block(100, MDS_matrix_library.G12_8_block, 4))   # 0.675 in 200 tries
+    # print("The success probability for G14_10_block is: ", test_repair_1_block(100, MDS_matrix_library.G14_10_block, 5))   # 0.88 in 200 tries
+    # print("The success probability for G16_12_block is: ", test_repair_1_block(100, MDS_matrix_library.G16_12_block, 6))   # 0.925 in 200 tries
     #
-    # print("The success probability for G14_8_block is: ", test_repair_1_block(100, scratch_3.G14_8_block, 4))   # 0.655 in 200 tries
-    # print("The success probability for G24_8_block is: ", test_repair_1_block(100, scratch_3.G24_8_block, 2))  # 0.79
-    # print("The success probability for G24_15_block is: ", test_repair_1_block(50, scratch_3.G24_15_block, 5))   # 0.94
+    # print("The success probability for G14_8_block is: ", test_repair_1_block(100, MDS_matrix_library.G14_8_block, 4))   # 0.655 in 200 tries
+    # print("The success probability for G24_8_block is: ", test_repair_1_block(50, MDS_matrix_library.G24_8_block, 2))  # 0.79
+    # print("The success probability for G24_15_block is: ", test_repair_1_block(50, MDS_matrix_library.G24_15_block, 5))   # 0.94
 
-    print("The success probability for G15_6 is: ", test_repair_1_block(100, scratch_3.G15_6_block, 2))  #   0.485 in 200 tries
-    print("The success probability for G18_9 is: ", test_repair_1_block(100, scratch_3.G18_9_block, 3))  #   0.815 in 200 tries
-    print("The success probability for G20_16_block is: ", test_repair_1_block(50, scratch_3.G20_16_block, 8))
-    print("The success probability for G21_12_block is: ", test_repair_1_block(100, scratch_3.G21_12_block, 4))   # 0.91
-    print("The success probability for G18_14_block is: ", test_repair_1_block(50, scratch_3.G18_14_block, 7))   # 0.95
-    # print("The success probability for G32_16_block is: ", test_repair_1_block(1, scratch_3.G32_16_block, 4))   # 0.96
-    # print("The success probability for G28_12_block is: ", test_repair_1_block(100, scratch_3.G28_12_block, 3))      # 0.84
-    # print("The success probability for G36_20_block is: ", test_repair_1_block(100, scratch_3.G36_20_block, 5))
+    # print("The success probability for G15_6 is: ", test_repair_1_block(100, MDS_matrix_library.G15_6_block, 2))  #   0.485 in 200 tries
+    # print("The success probability for G18_9 is: ", test_repair_1_block(100, MDS_matrix_library.G18_9_block, 3))  #   0.815 in 200 tries
+    # print("The success probability for G20_16_block is: ", test_repair_1_block(50, MDS_matrix_library.G20_16_block, 8))
+    # print("The success probability for G21_12_block is: ", test_repair_1_block(100, MDS_matrix_library.G21_12_block, 4))   # 0.91
+    # print("The success probability for G18_14_block is: ", test_repair_1_block(50, MDS_matrix_library.G18_14_block, 7))   # 0.95
+    # print("The success probability for G32_16_block is: ", test_repair_1_block(1, MDS_matrix_library.G32_16_block, 4))   # 0.96
+    # print("The success probability for G28_12_block is: ", test_repair_1_block(100, MDS_matrix_library.G28_12_block, 3))      # 0.84
+    # print("The success probability for G36_20_block is: ", test_repair_1_block(100, MDS_matrix_library.G36_20_block, 5))
 
 
 
@@ -629,20 +607,20 @@ if __name__ == "__main__":
 
     # test 2
 
-    # print("The success probability for G8_4 is: ", test_repair_2_block(200, scratch_3.G8_4, 2))# mostly in 1-3 attempts and a few 10-20 attempts we success
-    # print("The success probability for G10_6_block is: ", test_repair_2_block(200, scratch_3.G10_6_block, 3))# mostly in 1-5 attempts we success
-    # print("The success probability for G12_8_block is: ", test_repair_2_block(200, scratch_3.G12_8_block, 4))   # mostly in 1-3 attempts we success
-    # print("The success probability for G14_8_block is: ", test_repair_2_block(50, scratch_3.G14_8_block, 4))# mostly in 1-2 attempts we success
-    # print("The success probability for G14_10_block is: ", test_repair_2_block(30, scratch_3.G14_10_block, 5))# mostly 1 and a few 2 attempts we success
-    # print("The success probability for G16_12_block is: ", test_repair_2_block(30, scratch_3.G16_12_block, 6))# mostly in 1 attempt we success
-    # print("The success probability for G15_6 is: ", test_repair_2_block(30, scratch_3.G15_6_block, 2))# mostly in 1-4 attempts we success
-    # print("The success probability for G18_9 is: ", test_repair_2_block(30, scratch_3.G18_9_block, 3))# mostly in 1-2 attempts we success
-    # print("The success probability for G21_12_block is: ", test_repair_2_block(30, scratch_3.G21_12_block, 4))# mostly 1 and a few 2 attempt we success
-    # print("The success probability for G24_15_block is: ", test_repair_2_block(30, scratch_3.G24_15_block, 5))# mostly in 1 attempt we success
-    # print("The success probability for G28_12_block is: ", test_repair_2_block(30, scratch_3.G28_12_block, 3))
-    # print("The success probability for G32_16_block is: ", test_repair_2_block(30, scratch_3.G32_16_block, 4))# mostly 1 and a few 2 attempt we success
-    # print("The success probability for G36_20_block is: ", test_repair_2_block(30, scratch_3.G36_20_block, 5))
-    # print("The success probability for G20_16_block is: ", test_repair_2_block(30, scratch_3.G20_16_block, 8))
+    # print("The success probability for G8_4 is: ", test_repair_2_block(100, MDS_matrix_library.G8_4, 2))# mostly in 1-3 attempts and a few 10-20 attempts we success
+    # print("The success probability for G10_6_block is: ", test_repair_2_block(200, MDS_matrix_library.G10_6_block, 3))# mostly in 1-5 attempts we success
+    # print("The success probability for G12_8_block is: ", test_repair_2_block(200, MDS_matrix_library.G12_8_block, 4))   # mostly in 1-3 attempts we success
+    # print("The success probability for G14_8_block is: ", test_repair_2_block(50, MDS_matrix_library.G14_8_block, 4))# mostly in 1-2 attempts we success
+    # print("The success probability for G14_10_block is: ", test_repair_2_block(30, MDS_matrix_library.G14_10_block, 5))# mostly 1 and a few 2 attempts we success
+    # print("The success probability for G16_12_block is: ", test_repair_2_block(30, MDS_matrix_library.G16_12_block, 6))# mostly in 1 attempt we success
+    # print("The success probability for G15_6 is: ", test_repair_2_block(30, MDS_matrix_library.G15_6_block, 2))# mostly in 1-4 attempts we success
+    # print("The success probability for G18_9 is: ", test_repair_2_block(30, MDS_matrix_library.G18_9_block, 3))# mostly in 1-2 attempts we success
+    # print("The success probability for G21_12_block is: ", test_repair_2_block(30, MDS_matrix_library.G21_12_block, 4))# mostly 1 and a few 2 attempt we success
+    # print("The success probability for G24_15_block is: ", test_repair_2_block(30, MDS_matrix_library.G24_15_block, 5))# mostly in 1 attempt we success
+    # print("The success probability for G28_12_block is: ", test_repair_2_block(30, MDS_matrix_library.G28_12_block, 3))
+    # print("The success probability for G32_16_block is: ", test_repair_2_block(30, MDS_matrix_library.G32_16_block, 4))# mostly 1 and a few 2 attempt we success
+    # print("The success probability for G36_20_block is: ", test_repair_2_block(30, MDS_matrix_library.G36_20_block, 5))
+    # print("The success probability for G20_16_block is: ", test_repair_2_block(30, MDS_matrix_library.G20_16_block, 8))
 
 
 
@@ -651,40 +629,40 @@ if __name__ == "__main__":
 
     # test 3
 
-    # print("For a matrix G8_4", repair_3_block(scratch_3.G8_4, 2))   # success
-    # print("For a matrix G10_6", repair_3_block(scratch_3.G10_6_block, 3))    # success
-    # print("For a matrix G12_8", repair_3_block(scratch_3.G12_8_block, 4))    # success
-    # print("For a matrix G14_8", repair_3_block(scratch_3.G14_8_block, 4))    # success
-    # print("For a matrix G14_10", repair_3_block(scratch_3.G14_10_block, 5))    # success
-    # print("For a matrix G16_12", repair_3_block(scratch_3.G16_12_block, 6))    # success
-    # print("For a matrix G15_6", repair_3_block(scratch_3.G15_6_block, 2))    # success
-    # print("For a matrix G18_9", repair_3_block(scratch_3.G18_9_block, 3))    # success
-    # print("For a matrix G20_16", repair_3_block(scratch_3.G20_16_block, 8))    # success
-    # print("For a matrix G21_12", repair_3_block(scratch_3.G21_12_block, 4))    # success
-    # print("For a matrix G32_16", repair_3_block(scratch_3.G32_16_block, 4))    # success
-    # print("For a matrix G28_12", repair_3_block(scratch_3.G28_12_block, 3))    # success
-    # print("For a matrix G36_20", repair_3_block(scratch_3.G36_20_block, 5))
+    # print("For a matrix G8_4", repair_3_block(MDS_matrix_library.G8_4, 2))   # success
+    # print("For a matrix G10_6", repair_3_block(MDS_matrix_library.G10_6_block, 3))    # success
+    # print("For a matrix G12_8", repair_3_block(MDS_matrix_library.G12_8_block, 4))    # success
+    # print("For a matrix G14_8", repair_3_block(MDS_matrix_library.G14_8_block, 4))    # success
+    # print("For a matrix G14_10", repair_3_block(MDS_matrix_library.G14_10_block, 5))    # success
+    # print("For a matrix G16_12", repair_3_block(MDS_matrix_library.G16_12_block, 6))    # success
+    # print("For a matrix G15_6", repair_3_block(MDS_matrix_library.G15_6_block, 2))    # success
+    # print("For a matrix G18_9", repair_3_block(MDS_matrix_library.G18_9_block, 3))    # success
+    # print("For a matrix G20_16", repair_3_block(MDS_matrix_library.G20_16_block, 8))    # success
+    # print("For a matrix G21_12", repair_3_block(MDS_matrix_library.G21_12_block, 4))    # success
+    # print("For a matrix G32_16", repair_3_block(MDS_matrix_library.G32_16_block, 4))    # success
+    # print("For a matrix G28_12", repair_3_block(MDS_matrix_library.G28_12_block, 3))    # success
+    # print("For a matrix G36_20", repair_3_block(MDS_matrix_library.G36_20_block, 5))
 
 
     # test 4
 
-    # print("The success probability for G8_4 is: ", test_repair_4_block(200, scratch_3.G8_4, 2))   #
-    # print("The success probability for G10_6_block is: ", test_repair_4_block(200, scratch_3.G10_6_block, 3))   #
-    # print("The success probability for G12_8_block is: ", test_repair_4_block(200, scratch_3.G12_8_block, 4))   #
-    # print("The success probability for G14_10_block is: ", test_repair_4_block(200, scratch_3.G14_10_block, 5))   #
-    # print("The success probability for G16_12_block is: ", test_repair_4_block(100, scratch_3.G16_12_block, 6))   #
+    # print("The success probability for G8_4 is: ", test_repair_4_block(200, MDS_matrix_library.G8_4, 2))   #
+    # print("The success probability for G10_6_block is: ", test_repair_4_block(200, MDS_matrix_library.G10_6_block, 3))   #
+    # print("The success probability for G12_8_block is: ", test_repair_4_block(200, MDS_matrix_library.G12_8_block, 4))   #
+    # print("The success probability for G14_10_block is: ", test_repair_4_block(200, MDS_matrix_library.G14_10_block, 5))   #
+    # print("The success probability for G16_12_block is: ", test_repair_4_block(100, MDS_matrix_library.G16_12_block, 6))   #
     #
-    # print("The success probability for G24_8_block is: ", test_repair_4_block(100, scratch_3.G24_8_block, 2))  #
-    # print("The success probability for G24_15_block is: ", test_repair_4_block(100, scratch_3.G24_15_block, 5))  #
-    # print("The success probability for G18_14_block is: ", test_repair_4_block(100, scratch_3.G18_14_block, 7))  #
+    # print("The success probability for G24_8_block is: ", test_repair_4_block(100, MDS_matrix_library.G24_8_block, 2))  #
+    # print("The success probability for G24_15_block is: ", test_repair_4_block(100, MDS_matrix_library.G24_15_block, 5))  #
+    # print("The success probability for G18_14_block is: ", test_repair_4_block(100, MDS_matrix_library.G18_14_block, 7))  #
 
 
-    # print("The success probability for G15_6 is: ", test_repair_4_block(100, scratch_3.G15_6_block, 2))  #
-    # print("The success probability for G18_9 is: ", test_repair_4_block(100, scratch_3.G18_9_block, 3))  #
-    # print("The success probability for G20_16_block is: ", test_repair_4_block(100, scratch_3.G20_16_block, 8))
-    # print("The success probability for G21_12_block is: ", test_repair_4_block(100, scratch_3.G21_12_block, 4))   #
-    # print("The success probability for G28_12_block is: ", test_repair_4_block(40, scratch_3.G28_12_block, 3))      #
-    # print("The success probability for G24_15_block is: ", test_repair_4_block(40, scratch_3.G24_15_block, 5))  #
-    # print("The success probability for G32_16_block is: ", test_repair_4_block(30, scratch_3.G32_16_block, 4))   #
+    # print("The success probability for G15_6 is: ", test_repair_4_block(100, MDS_matrix_library.G15_6_block, 2))  #
+    # print("The success probability for G18_9 is: ", test_repair_4_block(100, MDS_matrix_library.G18_9_block, 3))  #
+    # print("The success probability for G20_16_block is: ", test_repair_4_block(100, MDS_matrix_library.G20_16_block, 8))
+    # print("The success probability for G21_12_block is: ", test_repair_4_block(100, MDS_matrix_library.G21_12_block, 4))   #
+    # print("The success probability for G28_12_block is: ", test_repair_4_block(40, MDS_matrix_library.G28_12_block, 3))      #
+    # print("The success probability for G24_15_block is: ", test_repair_4_block(40, MDS_matrix_library.G24_15_block, 5))  #
+    # print("The success probability for G32_16_block is: ", test_repair_4_block(30, MDS_matrix_library.G32_16_block, 4))   #
     #
-    # print("The success probability for G36_20_block is: ", test_repair_4_block(30, scratch_3.G36_20_block, 5))
+    # print("The success probability for G36_20_block is: ", test_repair_4_block(30, MDS_matrix_library.G36_20_block, 5))
