@@ -112,13 +112,15 @@ def generate_strong_Z(alpha, d):
     return Z
 
 
+
+
 # Z84 = Matrix(2, 3, [1, 1, 1, 1, 1, 0])
 # Z106 = Matrix(2, 4, [1, 1, 1, 1, 1, 1, 1, 0])
 # Z128 = Matrix(2, 5, [1, 1, 1, 1, 1, 1, 1, 0,1,1])
 # Z1410 =Matrix(2, 6, [1, 1, 1, 1, 1, 1,1,1, 1, 0,1,1])
-# Z156= Matrix(3,4, [0, 1, 1, 1, 1, 0, 1, 1, 1,1,0,1])
+Z156= Matrix(3,4, [0, 1, 1, 1, 1, 0, 1, 1, 1,1,0,1])
 # Z189 =Matrix(3,5, [0, 1, 1, 1, 1, 1, 1, 1, 1,1,0,1,1,1,0])
-Z248=Matrix([[1, 0, 0, 1, 1], [0, 0, 1, 1, 1], [0, 1, 1, 1, 0], [0, 0, 1, 1, 0]])
+# Z248=Matrix([[1, 0, 0, 1, 1], [0, 0, 1, 1, 1], [0, 1, 1, 1, 0], [0, 0, 1, 1, 0]])
 
 def test_mds_block(G, k):
     row = G.rows
@@ -235,7 +237,7 @@ def repair_1_block(G, k):
     d = alpha + k - 1
     fail_node = random.randint(1, n)
     # Z = generate_strong_Z(alpha, d)
-    Z = Z248
+    Z = Z156
     # print(row, col, alpha, n, d, fail_node, Z)
 
     access_nodes = set()
@@ -580,19 +582,20 @@ def test_repair_4_block(num, G, k):
 
 if __name__ == "__main__":
 
+
     # test 1
 
-    # print("The success probability for G8_4 is: ", test_repair_1_block(100, MDS_matrix_library.G8_4, 2))   # 0.11
-    # print("The success probability for G10_6_block is: ", test_repair_1_block(100, MDS_matrix_library.G10_6_block, 3))   # 0.525 in 200 tries
-    # print("The success probability for G12_8_block is: ", test_repair_1_block(100, MDS_matrix_library.G12_8_block, 4))   # 0.675 in 200 tries
-    # print("The success probability for G14_10_block is: ", test_repair_1_block(100, MDS_matrix_library.G14_10_block, 5))   # 0.88 in 200 tries
+    # print("The success probability for G8_4 is: ", test_repair_1_block(1000, MDS_matrix_library.G8_4, 2))   # 0.11
+    # print("The success probability for G10_6_block is: ", test_repair_1_block(1000, MDS_matrix_library.G10_6_block, 3))   # 0.525 in 200 tries
+    # print("The success probability for G12_8_block is: ", test_repair_1_block(1000, MDS_matrix_library.G12_8_block, 4))   # 0.675 in 200 tries
+    # print("The success probability for G14_10_block is: ", test_repair_1_block(1000, MDS_matrix_library.G14_10_block, 5))   # 0.88 in 200 tries
     # print("The success probability for G16_12_block is: ", test_repair_1_block(100, MDS_matrix_library.G16_12_block, 6))   # 0.925 in 200 tries
     #
     # print("The success probability for G14_8_block is: ", test_repair_1_block(100, MDS_matrix_library.G14_8_block, 4))   # 0.655 in 200 tries
     # print("The success probability for G24_8_block is: ", test_repair_1_block(50, MDS_matrix_library.G24_8_block, 2))  # 0.79
     # print("The success probability for G24_15_block is: ", test_repair_1_block(50, MDS_matrix_library.G24_15_block, 5))   # 0.94
 
-    # print("The success probability for G15_6 is: ", test_repair_1_block(100, MDS_matrix_library.G15_6_block, 2))  #   0.485 in 200 tries
+    print("The success probability for G15_6 is: ", test_repair_1_block(1000, MDS_matrix_library.G15_6_block, 2))  #   0.485 in 200 tries
     # print("The success probability for G18_9 is: ", test_repair_1_block(100, MDS_matrix_library.G18_9_block, 3))  #   0.815 in 200 tries
     # print("The success probability for G20_16_block is: ", test_repair_1_block(50, MDS_matrix_library.G20_16_block, 8))
     # print("The success probability for G21_12_block is: ", test_repair_1_block(100, MDS_matrix_library.G21_12_block, 4))   # 0.91
