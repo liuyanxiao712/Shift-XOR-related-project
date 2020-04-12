@@ -37,9 +37,8 @@ def binary_operation(G):
     G = G.subs(z ** 6, z ** 63)
     G = G.subs(z ** 4, z ** 65)
     G = G.subs(z ** 2, z ** 67)
-    G = G.subs(lambda x: x % 2 == 0, 0)
+    # G = G.subs(lambda x: x % 2 == 0, 0)
     return G
-
 
 def tiny_binary_operation(G):
     G = G.subs(2, 0)
@@ -50,6 +49,14 @@ def tiny_binary_operation(G):
     G = G.subs(5, 1)
     G = G.subs(7, 1)
     G = G.subs(9, 1)
+    return G
+
+def GF2(G):
+    """
+    Make the target operate on GF(2)
+    """
+    G = binary_operation(G)
+    G = tiny_binary_operation(G)
     return G
 
 
@@ -581,8 +588,7 @@ def test_repair_4_block(num, G, k):
 
 
 if __name__ == "__main__":
-
-
+    print(Matrix([[1, 0, 0, 0], [0, 1, 1, 1]]).rank())
     # test 1
 
     # print("The success probability for G8_4 is: ", test_repair_1_block(1000, MDS_matrix_library.G8_4, 2))   # 0.11
@@ -595,7 +601,7 @@ if __name__ == "__main__":
     # print("The success probability for G24_8_block is: ", test_repair_1_block(50, MDS_matrix_library.G24_8_block, 2))  # 0.79
     # print("The success probability for G24_15_block is: ", test_repair_1_block(50, MDS_matrix_library.G24_15_block, 5))   # 0.94
 
-    print("The success probability for G15_6 is: ", test_repair_1_block(1000, MDS_matrix_library.G15_6_block, 2))  #   0.485 in 200 tries
+    # print("The success probability for G15_6 is: ", test_repair_1_block(1000, MDS_matrix_library.G15_6_block, 2))  #   0.485 in 200 tries
     # print("The success probability for G18_9 is: ", test_repair_1_block(100, MDS_matrix_library.G18_9_block, 3))  #   0.815 in 200 tries
     # print("The success probability for G20_16_block is: ", test_repair_1_block(50, MDS_matrix_library.G20_16_block, 8))
     # print("The success probability for G21_12_block is: ", test_repair_1_block(100, MDS_matrix_library.G21_12_block, 4))   # 0.91
