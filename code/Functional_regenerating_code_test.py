@@ -1,9 +1,6 @@
 """
 This is the library for our use in manipulating MDS matrices
-
 THIS IS THE MAIN PROGRAM I USE NOW
-
-Please mainly use repair_1_block, repair_2_block, repair_3_block
 """
 
 from sympy import symbols, Matrix
@@ -15,48 +12,50 @@ import MDS_matrix_library
 
 z = symbols('z')
 
-def output_para(row, col, k):
-    alpha = col // k
-    n = row//alpha
-    d = alpha + k - 1
-    print(alpha, n, d)
 
-def generate_b_col_vector(alpha):
-    b = randMatrix(alpha, 1, 0, 1)
-    while b.rank() == 0:
-        b = randMatrix(alpha, 1, 0, 1)
-    return b
 
-def binary_operation(G):
-    G = G.subs(z ** 18, z ** 51)
-    G = G.subs(z ** 16, z ** 53)
-    G = G.subs(z ** 14, z ** 55)
-    G = G.subs(z ** 12, z ** 57)
-    G = G.subs(z ** 10, z ** 59)
-    G = G.subs(z ** 8, z ** 61)
-    G = G.subs(z ** 6, z ** 63)
-    G = G.subs(z ** 4, z ** 65)
-    G = G.subs(z ** 2, z ** 67)
-    # G = G.subs(lambda x: x % 2 == 0, 0)
-    return G
+def det_GF2(det):
+    """
+    This is specifically make the det work on GF(2)
+    Idea: det/2 if has "/2" in it, it must have odd terms
+    then we let them pass; otherwise make others 0
+    Genius!
+    """
+    a = det/2
+    if a.subs(z/2, 999) == a:  # only when a is all even
+        det = 0
+    return det
+
+
+# def binary_operation(G):
+#     G = G.subs(z ** 18, z ** 51)
+#     G = G.subs(z ** 16, z ** 53)
+#     G = G.subs(z ** 14, z ** 55)
+#     G = G.subs(z ** 12, z ** 57)
+#     G = G.subs(z ** 10, z ** 59)
+#     G = G.subs(z ** 8, z ** 61)
+#     G = G.subs(z ** 6, z ** 63)
+#     G = G.subs(z ** 4, z ** 65)
+#     G = G.subs(z ** 2, z ** 67)
+#     # G = G.subs(lambda x: x % 2 == 0, 0)
+#     return G
 
 def tiny_binary_operation(G):
+    """
+    This is mainly used to make newcomer work on GF(2)
+    """
     G = G.subs(2, 0)
     G = G.subs(4, 0)
     G = G.subs(6, 0)
     G = G.subs(8, 0)
+    G = G.subs(10, 0)
+    G = G.subs(12, 0)
     G = G.subs(3, 1)
     G = G.subs(5, 1)
     G = G.subs(7, 1)
     G = G.subs(9, 1)
-    return G
-
-def GF2(G):
-    """
-    Make the target operate on GF(2)
-    """
-    G = binary_operation(G)
-    G = tiny_binary_operation(G)
+    G = G.subs(11,1)
+    G = G.subs(13, 1)
     return G
 
 
@@ -75,11 +74,72 @@ def generate_b_row_vector(alpha):
     return b
 
 
+def generate_b_col_vector(alpha):
+    b = randMatrix(alpha, 1, 0, 1)
+    while b.rank() == 0:
+        b = randMatrix(alpha, 1, 0, 1)
+    return b
+
+
 def generate_Z(alpha, d):
     Z = randMatrix(alpha, d, 0, 1)
     while Z.rank() != alpha:
         Z = randMatrix(alpha, d, 0, 1)
     return Z
+
+
+def generate_strong_Z(alpha, d):
+    """
+    Z satisfies there are at least one "1" in each column
+    """
+    Z = zeros(alpha, d)
+    while Z.rank() != alpha:
+        Z = zeros(alpha, d)
+        for i in range(d):
+            N = random.randint(1, alpha)  # N means randomly choose how many "1" in this column
+            randNs = random.sample(range(alpha), N)
+            for j in range(N):
+                t = randNs[j]
+                Z[t, i] = 1
+    return Z
+
+def generate_strong_k_Z(alpha, d):
+    """
+       full-rank Z has exactly k "1" in each row
+       """
+    k = d - alpha + 1
+    Z = zeros(alpha, d)
+    while Z.rank() != alpha:
+        Z = zeros(alpha, d)
+        for i in range(alpha):
+            N = random.randint(k, k)
+            randNs = random.sample(range(d), N)
+            for j in range(N):
+                t = randNs[j]
+                Z[i, t] = 1
+    return Z
+
+
+def generate_stronger_Z(alpha, d):
+    """
+    full-rank Z has at least k "1" in each row
+    """
+    k=d-alpha+1
+    Z = zeros(alpha, d)
+    while Z.rank() != alpha:
+        Z = zeros(alpha, d)
+        for i in range(alpha):
+            N = random.randint(k,d)
+            randNs = random.sample(range(d), N)
+            for j in range(N):
+                t = randNs[j]
+                Z[i,t] = 1
+    return Z
+
+
+
+
+
 
 
 def test_mds(G):
@@ -92,63 +152,34 @@ def test_mds(G):
         for i in range(1, col):
             temp_matrix = Matrix([temp_matrix, G[q[i]-1:q[i], :]])
         det = temp_matrix.det()
+        det = det_GF2(det)
         if det == 0:
             failure = 0   # fail
             break
-            return 0
+    if failure == 0:
+        return 0
     if failure == 1:
         return 1   # success
 
-def generate_strong_Z(alpha, d):
-    """
-    This Z satisfies that there are no less than k element "1"  in its each row
-    :param alpha:
-    :param d:
-    :return:
-    """
-    k = d+1-alpha
-    Z = zeros(alpha, d)
-    for i in range(alpha):
-        N = random.randint(k, d)   # N is the number of element "1" in this row
-        randNs = random.sample(range(d), N)
-        for j in range(N):
-            t = randNs[j]
-            Z[i, t] = 1
-    while Z.rank() != alpha:
-        generate_strong_Z(alpha, d)
-    return Z
-
-
-
-
-# Z84 = Matrix(2, 3, [1, 1, 1, 1, 1, 0])
-# Z106 = Matrix(2, 4, [1, 1, 1, 1, 1, 1, 1, 0])
-# Z128 = Matrix(2, 5, [1, 1, 1, 1, 1, 1, 1, 0,1,1])
-# Z1410 =Matrix(2, 6, [1, 1, 1, 1, 1, 1,1,1, 1, 0,1,1])
-Z156= Matrix(3,4, [0, 1, 1, 1, 1, 0, 1, 1, 1,1,0,1])
-# Z189 =Matrix(3,5, [0, 1, 1, 1, 1, 1, 1, 1, 1,1,0,1,1,1,0])
-# Z248=Matrix([[1, 0, 0, 1, 1], [0, 0, 1, 1, 1], [0, 1, 1, 1, 0], [0, 0, 1, 1, 0]])
 
 def test_mds_block(G, k):
     row = G.rows
     col = G.cols
     alpha = col // k
     n = row // alpha
-    # d = alpha + k - 1
     fail = 1
     for q in combinations(list(range(1, n+1)), k):
-        # print(q)
-        new_matrix = G[(q[0]-1)*alpha:q[0]*alpha, :]
+        temp_matrix = G[(q[0]-1)*alpha:q[0]*alpha, :]
         for i in range(1, k):
-            new_matrix = Matrix([new_matrix, G[(q[i]-1)*alpha:q[i]*alpha, :]])
-        det = new_matrix.det()
-        # print(det)
-        if binary_operation(det) == 0:
+            temp_matrix = Matrix([temp_matrix, G[(q[i]-1)*alpha:q[i]*alpha, :]])
+        det = temp_matrix.det()
+        if det_GF2(det) == 0:
             fail = 0
     if fail == 0:
-        return 0 # fail
+        return 0  # fail
     else:
-        return 1 # success
+        return 1  # success
+
 
 def generate_mds_f(i,j):
     if i == j:
@@ -162,14 +193,13 @@ def generate_mds(row, col):
     while a == 0:
         MDS = Matrix(row, col, generate_mds_f)
         if test_mds(MDS) == 0:
-            a = 0;
+            a = 0
         else:
             a = 1
-    # print("for matrix", row, "*", col, ", the MDS matrix is ", MDS)
     return MDS
 
+
 def generate_mds_block(row, col, k):
-    alpha = col // k
     a = 0
     while a == 0:
         MDS = Matrix(row, col, generate_mds_f)
@@ -236,16 +266,15 @@ def repair_1_block(G, k):
     :param k: originally we have k nodes
     :return: 0 is fail and 1 is success
     """
-    # print("G", G)
     row = G.rows
     col = G.cols
     alpha = col // k
     n = row // alpha
     d = alpha + k - 1
     fail_node = random.randint(1, n)
-    # Z = generate_strong_Z(alpha, d)
-    Z = Z156
-    # print(row, col, alpha, n, d, fail_node, Z)
+    Z = Matrix([[1,1,0],[0,1,1]])
+    # Z = generate_strong_k_Z(alpha, d)
+    print("This time node", fail_node, "fails, and Z is", Z)
 
     access_nodes = set()
     while len(access_nodes) < d:
@@ -253,46 +282,35 @@ def repair_1_block(G, k):
         if fail_node in access_nodes:
             access_nodes.remove(fail_node)
     access_nodes = list(access_nodes)
-    # print("access_nodes", access_nodes)
 
     access_matrix = generate_b_full_rank(alpha) * G[(access_nodes[0]-1) * alpha: access_nodes[0] * alpha, :]
-
     for i in range(1, d):
         access_matrix = Matrix([access_matrix, generate_b_full_rank(alpha) * G[(access_nodes[i]-1)*alpha: access_nodes[i]*alpha, :]])
-    # print("access_matrix", access_matrix)
-    newcomer = Z * access_matrix
-    newcomer = tiny_binary_operation(newcomer)
-    # print("newcomer", newcomer)
 
+    newcomer = Z * access_matrix
+    # print("Newcomer before GF(2):", newcomer)
+    newcomer = tiny_binary_operation(newcomer)
+    print("Newcomer after GF(2):", newcomer)
 
     fail = 1
     tempG = Matrix([G[0:(fail_node - 1)*alpha, :], G[fail_node*alpha:, :]])
-    # print("tempG", tempG)
+    print("After failure the remained matrix is", tempG)
     for p in combinations(list(range(1, n)), k-1):
-        # print(p)
+        print("p is", p)
         temp_matrix = tempG[(p[0]-1)*alpha:p[0]*alpha, :]
         for i in range(1, k-1):
             temp_matrix = Matrix([temp_matrix, tempG[(p[i]-1)*alpha:alpha*p[i], :]])
         temp_matrix = Matrix([temp_matrix, newcomer])
-        # print("temp_matrix before", temp_matrix)
-        # temp_matrix = tiny_binary_operation(temp_matrix)
-        # print("temp_matrix after", temp_matrix)
 
         det = temp_matrix.det()
-        # print("det", det)
-
-
-        # This is to determine if all determinant components are even
-        # if (det/2) == (det/2).subs(z**1/2, 0):
-        #     det = 0
-        #     print("oh")
-
+        print("This time det is", det)
+        det = det_GF2(det)
         if det == 0:
             fail = 0
             break
 
     if fail == 0:
-        return 0
+        return 0  # this time we fail
     else:
         return 1
 
@@ -537,6 +555,7 @@ def test_repair_1(num, G, k):
             count = count + 1
     return count/num
 
+
 def test_repair_1_block(num, G, k):
     print("This time we try ", num, "times.")
     count = 0
@@ -547,6 +566,7 @@ def test_repair_1_block(num, G, k):
         if repair_1_block(G, k) == 1:
             count = count + 1
     return count/num
+
 
 def test_repair_2_block(num, G, k):
     print("This time we try ", num, "times.")
@@ -588,26 +608,25 @@ def test_repair_4_block(num, G, k):
 
 
 if __name__ == "__main__":
-    print(Matrix([[1, 0, 0, 0], [0, 1, 1, 1]]).rank())
     # test 1
-
-    # print("The success probability for G8_4 is: ", test_repair_1_block(1000, MDS_matrix_library.G8_4, 2))   # 0.11
-    # print("The success probability for G10_6_block is: ", test_repair_1_block(1000, MDS_matrix_library.G10_6_block, 3))   # 0.525 in 200 tries
-    # print("The success probability for G12_8_block is: ", test_repair_1_block(1000, MDS_matrix_library.G12_8_block, 4))   # 0.675 in 200 tries
-    # print("The success probability for G14_10_block is: ", test_repair_1_block(1000, MDS_matrix_library.G14_10_block, 5))   # 0.88 in 200 tries
-    # print("The success probability for G16_12_block is: ", test_repair_1_block(100, MDS_matrix_library.G16_12_block, 6))   # 0.925 in 200 tries
+    # print(test_mds(MDS_matrix_library.G10_6))
+    print("The success probability for G8_4 is: ", test_repair_1_block(20, MDS_matrix_library.G8_4, 2))   # 0.2
+    # print("The success probability for G10_6_block is: ", test_repair_1_block(20, MDS_matrix_library.G10_6, 3))   # 0.525 in 200 tries
+    # print("The success probability for G12_8_block is: ", test_repair_1_block(20, MDS_matrix_library.G12_8_block, 4))   # 0.675 in 200 tries
+    # print("The success probability for G14_10_block is: ", test_repair_1_block(10, MDS_matrix_library.G14_10_block, 5))   # 0.88 in 200 tries
+    # print("The success probability for G16_12_block is: ", test_repair_1_block(20, MDS_matrix_library.G16_12_block, 6))   # 0.925 in 200 tries
     #
     # print("The success probability for G14_8_block is: ", test_repair_1_block(100, MDS_matrix_library.G14_8_block, 4))   # 0.655 in 200 tries
     # print("The success probability for G24_8_block is: ", test_repair_1_block(50, MDS_matrix_library.G24_8_block, 2))  # 0.79
     # print("The success probability for G24_15_block is: ", test_repair_1_block(50, MDS_matrix_library.G24_15_block, 5))   # 0.94
 
-    # print("The success probability for G15_6 is: ", test_repair_1_block(1000, MDS_matrix_library.G15_6_block, 2))  #   0.485 in 200 tries
-    # print("The success probability for G18_9 is: ", test_repair_1_block(100, MDS_matrix_library.G18_9_block, 3))  #   0.815 in 200 tries
+    # print("The success probability for G15_6 is: ", test_repair_1_block(20, MDS_matrix_library.G15_6_block, 2))  #   0.485 in 200 tries
+    # print("The success probability for G18_9 is: ", test_repair_1_block(20, MDS_matrix_library.G18_9_block, 3))  #   0.815 in 200 tries
     # print("The success probability for G20_16_block is: ", test_repair_1_block(50, MDS_matrix_library.G20_16_block, 8))
     # print("The success probability for G21_12_block is: ", test_repair_1_block(100, MDS_matrix_library.G21_12_block, 4))   # 0.91
     # print("The success probability for G18_14_block is: ", test_repair_1_block(50, MDS_matrix_library.G18_14_block, 7))   # 0.95
     # print("The success probability for G32_16_block is: ", test_repair_1_block(1, MDS_matrix_library.G32_16_block, 4))   # 0.96
-    # print("The success probability for G28_12_block is: ", test_repair_1_block(100, MDS_matrix_library.G28_12_block, 3))      # 0.84
+    # print("The success probability for G28_12_block is: ", test_repair_1_block(10, MDS_matrix_library.G28_12_block, 3))      # 0.84
     # print("The success probability for G36_20_block is: ", test_repair_1_block(100, MDS_matrix_library.G36_20_block, 5))
 
 

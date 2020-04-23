@@ -9,6 +9,7 @@ from sympy import symbols, Matrix
 from sympy.matrices import randMatrix, zeros, eye
 from itertools import combinations
 import random
+from random import  choice
 import numpy as np
 import Functional_regenerating_code_test
 import MDS_matrix_library
@@ -132,7 +133,7 @@ def Theorm2(G, k):
     b.append(b1)
 
     for i in range(1, d):
-        bi =Functional_regenerating_code_test.generate_b_row_vector(alpha)
+        bi = Functional_regenerating_code_test.generate_b_row_vector(alpha)
         b.append(bi)
         # access_matrix = Matrix([access_matrix,
         #                         bi * G[(access_nodes[i] - 1) * alpha: access_nodes[i] * alpha,
@@ -254,26 +255,31 @@ def test_Multi_repair_1(num, G, k, N):
 
 def multi_repair_block(G, k, N):
     """
+    *************************************************************************
     Note: this is the final version I use to test.
     On a certain matrix G, we fail its blocks once by once,
     to see if we can always find a way to repair after N rounds.
+    *************************************************************************
     """
     row = G.rows
     col = G.cols
     alpha = col // k
     n = row // alpha
     d = alpha + k - 1
-    trytime = 200
+    trytime = 100
+    Z_set = [Matrix([[1, 1, 0], [0, 1, 1]]), Matrix([[1, 0, 1], [1, 1, 0]]), Matrix([[1, 0, 1], [0, 1, 1]])]
 
     # fail = 0
     fail2 = 1   # if fail2 = 0, it means we try many times but cannot repair
+
 
     repaired_matrix = G
     for t in range(N):
         print("This is round", t)
         fail = 0  # If fail=1 it means we success in this round
-        fail_node = random.randint(1, n)
-        print("THe failed node is node", fail_node)
+        # fail_node = random.randint(1, n)
+        fail_node = 3
+        print("The failed node is node ", fail_node)
 
         access_nodes = set()
         while len(access_nodes) < d:
@@ -281,18 +287,24 @@ def multi_repair_block(G, k, N):
             if fail_node in access_nodes:
                 access_nodes.remove(fail_node)
         access_nodes = list(access_nodes)
-        access_matrix = Functional_regenerating_code_test.generate_b_full_rank(alpha) * repaired_matrix[(access_nodes[0] - 1) * alpha: access_nodes[0] * alpha, :]
+
+        access_matrix = Functional_regenerating_code_test.generate_b_full_rank(alpha) * repaired_matrix[(access_nodes[0]- 1) * alpha: access_nodes[0] * alpha, :]
         for i in range(1, d):
             access_matrix = Matrix([access_matrix, Functional_regenerating_code_test.generate_b_full_rank(alpha) * repaired_matrix[(access_nodes[i] - 1) * alpha:
                                                                                        access_nodes[i] * alpha, :]])
+        access_matrix = Functional_regenerating_code_test.tiny_binary_operation(access_matrix)
 
+        print("access_matrix is", access_matrix)
         tempG = Matrix([repaired_matrix[0:(fail_node - 1) * alpha, :], repaired_matrix[fail_node * alpha:, :]])
+        print("tempG we temporarily use after failure is", tempG)
 
-        r = 0 # 有两种情况你会跳出while，要么你repair成功了，要么试了很多次发现再也没法repair了
+        r = 0  # 有两种情况你会跳出while，要么你repair成功了，要么试了很多次发现再也没法repair了
         while fail == 0 and r <= trytime:  # r is round number
             print("This is trytime ", r, "in round", t)
-            Z = generate_strong_Z(alpha, d)
+            # Z = generate_strong_Z(alpha, d)
+            Z = choice(Z_set)
             print("This time Z is", Z)
+
             newcomer = Z * access_matrix
             newcomer = Functional_regenerating_code_test.tiny_binary_operation(newcomer)
             print("This time newcomer is", newcomer)
@@ -300,21 +312,21 @@ def multi_repair_block(G, k, N):
             fail1 = 1  # to denote if repair success. If it's 0, means we fail
             for p in combinations(list(range(1, n)), k - 1):
                 print("This is p", p)
+
                 temp_matrix = tempG[(p[0] - 1) * alpha:p[0] * alpha, :]
                 for i in range(1, k - 1):
                     temp_matrix = Matrix([temp_matrix, tempG[(p[i] - 1) * alpha:alpha * p[i], :]])
+
                 temp_matrix = Matrix([temp_matrix, newcomer])
+                print("After adding the newcomer, the temp_matrix is ", temp_matrix)
                 det = temp_matrix.det()
-                print("Before GF2, the det is", det)
-                det = Functional_regenerating_code_test.GF2(det)
-                print("After GF2, the det is", det)
+                print("Before GF2, the temp_matrix's det is", det)
+                det = Functional_regenerating_code_test.det_GF2(det)
+                print("After GF2, the temp_matrix's det is", det)
                 if det == 0:  # det = 0 means fail this time
                     fail1 = 0
                     print("No, this newcomer cannot fit")
                     break
-            # if Functional_regenerating_code_test.test_mds_block(Matrix([newcomer, tempG]), k) == 0:
-            #     fail1 = 0
-            #     print("No, this newcomer cannot fit")
 
             if fail1 == 0:  # means we fail this time
                 r = r + 1
@@ -737,20 +749,8 @@ def test_Multi_repair_block_1(num, G, k, N):
 
 
 if __name__ == "__main__":
-    multi_repair_block(MDS_matrix_library.G10_6, 3, 10)
-    # G16 = Matrix([[1, z + 1, z, z, z + 1, 1], [z, 0, 1, 0, 1, 0],
-    #                 [1, z + 1, 0, 1, 0, 1], [1, z + 1, z, 0, z, 1],
-    #                 [0, z+1, 1, 0, 1, z], [0, 0, z, 1, z, 0]])
-    #
-    # Gwrong = Matrix([[2*z + 4, 5*z + 5, 2*z + 5, 4*z + 2, 2*z + 3, z + 4], [2, 2*z + 2, z, 1, z, 2],
-    #               [1, z + 1, 0, 1, 0, 1], [1, z + 1, z, 0, z, 1],
-    #               [0, z + 1, 1, 0, 1, z], [0, 0, z, 1, z, 0]])
-    # print("tiny, ", Functional_regenerating_code_test.tiny_binary_operation(Gwrong))
-    # print(G16.det())
-    # print(Functional_regenerating_code_test.tiny_binary_operation(G16.det()))
-    # print(Gwrong.det())
 
-    # print("The success probability for G8_4 is: ", test_Multi_repair_1(500, MDS_matrix_library.G8_4, 2, 1))
+    # print("The success probability for G8_4 is: ", test_Multi_repair_1(50, MDS_matrix_library.G8_4, 2, 3))
     # print("The success probability for G8_4 is: ", test_Multi_repair_1(500, MDS_matrix_library.G8_4, 2, 2))
     # print("The success probability for G8_4 is: ", test_Multi_repair_1(500, MDS_matrix_library.G8_4, 2, 3))
 
