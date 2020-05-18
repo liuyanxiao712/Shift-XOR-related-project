@@ -8,6 +8,7 @@ from sympy.matrices import randMatrix, zeros, ones
 
 from itertools import combinations
 import random
+from random import  choice
 import MDS_matrix_library
 
 z = symbols('z')
@@ -272,8 +273,9 @@ def repair_1_block(G, k):
     n = row // alpha
     d = alpha + k - 1
     fail_node = random.randint(1, n)
-    Z = Matrix([[1,1,0],[0,1,1]])
-    # Z = generate_strong_k_Z(alpha, d)
+
+    Z_set = [Matrix([[1, 1, 0], [0, 1, 1]]), Matrix([[1, 0, 1], [1, 1, 0]]), Matrix([[1, 0, 1], [0, 1, 1]])]
+    Z = choice(Z_set)
     print("This time node", fail_node, "fails, and Z is", Z)
 
     access_nodes = set()
@@ -592,6 +594,7 @@ def test_repair_2(num, G, k):
         result[key] = result.get(key, 0) + 1
     print("There are B times we need random Z for A times to repair, A:B", result)
 
+
 def test_repair_4_block(num, G, k):
     # print("This time we try ", num, "times.")
     count = 0
@@ -610,7 +613,7 @@ def test_repair_4_block(num, G, k):
 if __name__ == "__main__":
     # test 1
     # print(test_mds(MDS_matrix_library.G10_6))
-    print("The success probability for G8_4 is: ", test_repair_1_block(20, MDS_matrix_library.G8_4, 2))   # 0.2
+    print("The success probability for G8_4 is: ", test_repair_1_block(1000, MDS_matrix_library.G8_4, 2))   # 0.2
     # print("The success probability for G10_6_block is: ", test_repair_1_block(20, MDS_matrix_library.G10_6, 3))   # 0.525 in 200 tries
     # print("The success probability for G12_8_block is: ", test_repair_1_block(20, MDS_matrix_library.G12_8_block, 4))   # 0.675 in 200 tries
     # print("The success probability for G14_10_block is: ", test_repair_1_block(10, MDS_matrix_library.G14_10_block, 5))   # 0.88 in 200 tries

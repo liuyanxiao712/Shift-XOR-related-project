@@ -38,8 +38,6 @@ def generate_strong_Z(alpha, d):
 
 
 
-
-
 def repair_1_block_strong(G, k):
     """ Totally random b, Z, d and fail_node, try to see if success
     :param G: matrix to be repaired, failed node is randomly chosen in this marix
@@ -255,11 +253,9 @@ def test_Multi_repair_1(num, G, k, N):
 
 def multi_repair_block(G, k, N):
     """
-    *************************************************************************
     Note: this is the final version I use to test.
     On a certain matrix G, we fail its blocks once by once,
     to see if we can always find a way to repair after N rounds.
-    *************************************************************************
     """
     row = G.rows
     col = G.cols
@@ -267,11 +263,10 @@ def multi_repair_block(G, k, N):
     n = row // alpha
     d = alpha + k - 1
     trytime = 100
-    Z_set = [Matrix([[1, 1, 0], [0, 1, 1]]), Matrix([[1, 0, 1], [1, 1, 0]]), Matrix([[1, 0, 1], [0, 1, 1]])]
+    # Z_set = [Matrix([[1, 1, 0], [0, 1, 1]]), Matrix([[1, 0, 1], [1, 1, 0]]), Matrix([[1, 0, 1], [0, 1, 1]])]
 
     # fail = 0
     fail2 = 1   # if fail2 = 0, it means we try many times but cannot repair
-
 
     repaired_matrix = G
     for t in range(N):
@@ -301,8 +296,8 @@ def multi_repair_block(G, k, N):
         r = 0  # 有两种情况你会跳出while，要么你repair成功了，要么试了很多次发现再也没法repair了
         while fail == 0 and r <= trytime:  # r is round number
             print("This is trytime ", r, "in round", t)
-            # Z = generate_strong_Z(alpha, d)
-            Z = choice(Z_set)
+            # Z = choice(Z_set)
+            Z = generate_strong_Z(alpha, d)
             print("This time Z is", Z)
 
             newcomer = Z * access_matrix
@@ -342,7 +337,94 @@ def multi_repair_block(G, k, N):
         if fail2 == 0:
             print("This stupid system is permanently down")
             break
+    if fail2 == 1:
+        print("We survive after", N, "rounds !")
+        print("The final matrix we obtain is", repaired_matrix)
 
+
+def multi_transfer_two_phase(G, k, N):
+    """
+    *************************************************************************
+    Note: this version tests transfer code and use two-phase checking
+    *************************************************************************
+    """
+    row = G.rows
+    col = G.cols
+    alpha = col // k
+    n = row // alpha
+    d = alpha + k - 1
+    trytime = 200
+
+    # fail = 0
+    fail2 = 1   # if fail2 = 0, it means we try many times but cannot repair
+
+    repaired_matrix = G
+    for t in range(N):
+        print("This is round", t)
+        fail = 0  # If fail=1 it means we success in this round
+        fail_node = random.randint(1, n)
+        # fail_node = 3
+        print("The failed node is node ", fail_node)
+
+        access_nodes = set()
+        while len(access_nodes) < d:
+            access_nodes.add(random.randint(1, n))
+            if fail_node in access_nodes:
+                access_nodes.remove(fail_node)
+        access_nodes = list(access_nodes)
+
+        access_matrix = repaired_matrix[(access_nodes[0]- 1) * alpha: access_nodes[0] * alpha, :]
+        for i in range(1, d):
+            access_matrix = Matrix([access_matrix, repaired_matrix[(access_nodes[i] - 1) * alpha: access_nodes[i] * alpha, :]])
+
+        # print("access_matrix is", access_matrix)
+        tempG = access_matrix
+        # print("tempG we temporarily use after failure is", tempG)
+
+        r = 0  # 有两种情况你会跳出while，要么你repair成功了，要么试了很多次发现再也没法repair了
+        while fail == 0 and r <= trytime:  # r is round number
+            print("This is trytime ", r, "in round", t)
+            # Z = choice(Z_set)
+            Z = generate_strong_Z(alpha, d*alpha)
+            print("This time Z is", Z)
+
+            newcomer = Z * access_matrix
+            newcomer = Functional_regenerating_code_test.tiny_binary_operation(newcomer)
+            print("This time newcomer is", newcomer)
+
+            fail1 = 1  # to denote if repair success. If it's 0, means we fail
+            for p in combinations(list(range(1, n)), k - 1):
+                # print("This is p", p)
+
+                temp_matrix = tempG[(p[0] - 1) * alpha:p[0] * alpha, :]
+                for i in range(1, k - 1):
+                    temp_matrix = Matrix([temp_matrix, tempG[(p[i] - 1) * alpha:alpha * p[i], :]])
+
+                temp_matrix = Matrix([temp_matrix, newcomer])
+                # print("After adding the newcomer, the temp_matrix is ", temp_matrix)
+                det = temp_matrix.det()
+                # print("Before GF2, the temp_matrix's det is", det)
+                det = Functional_regenerating_code_test.det_GF2(det)
+                # print("After GF2, the temp_matrix's det is", det)
+                if det == 0:  # det = 0 means fail this time
+                    fail1 = 0
+                    print("No, this newcomer cannot fit")
+                    break
+
+            if fail1 == 0:  # means we fail this time
+                r = r + 1
+                if r == trytime - 2:
+                    fail2 = 0
+
+            if fail1 == 1:
+                repaired_matrix = Matrix([tempG, newcomer])
+                print("In round", t, "you success, let's torture this matrix again!")
+                print("Now the repaired matrix is ", repaired_matrix)
+                fail = 1
+
+        if fail2 == 0:
+            print("This stupid system is permanently down")
+            break
     if fail2 == 1:
         print("We survive after", N, "rounds !")
         print("The final matrix we obtain is", repaired_matrix)
@@ -749,6 +831,7 @@ def test_Multi_repair_block_1(num, G, k, N):
 
 
 if __name__ == "__main__":
+    multi_transfer_two_phase(MDS_matrix_library.G8_4, 2, 100)
 
     # print("The success probability for G8_4 is: ", test_Multi_repair_1(50, MDS_matrix_library.G8_4, 2, 3))
     # print("The success probability for G8_4 is: ", test_Multi_repair_1(500, MDS_matrix_library.G8_4, 2, 2))
