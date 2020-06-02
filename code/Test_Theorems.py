@@ -342,10 +342,20 @@ def multi_repair_block(G, k, N):
         print("The final matrix we obtain is", repaired_matrix)
 
 
-def multi_transfer_two_phase(G, k, N):
+def check_rMDS(G, k):
+    row = G.rows
+    col = G.cols
+    alpha = col // k
+    n = row // alpha
+    d = alpha + k - 1
+
+
+
+
+def multi_random_two_phase(G, k, N):
     """
     *************************************************************************
-    Note: this version tests transfer code and use two-phase checking
+    Note: randomly generate b and Z, use two-phase checking to ensure.
     *************************************************************************
     """
     row = G.rows
@@ -353,7 +363,7 @@ def multi_transfer_two_phase(G, k, N):
     alpha = col // k
     n = row // alpha
     d = alpha + k - 1
-    trytime = 200
+    trytime = 100
 
     # fail = 0
     fail2 = 1   # if fail2 = 0, it means we try many times but cannot repair
@@ -828,6 +838,9 @@ def test_Multi_repair_block_1(num, G, k, N):
         if multi_repair_block_1(G, k, N) == 1:
             count = count + 1
     return count/num
+
+
+
 
 
 if __name__ == "__main__":

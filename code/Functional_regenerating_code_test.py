@@ -14,7 +14,6 @@ import MDS_matrix_library
 z = symbols('z')
 
 
-
 def det_GF2(det):
     """
     This is specifically make the det work on GF(2)
@@ -440,12 +439,6 @@ def repair_2_block(G, k):
         return 1
 
 
-
-
-
-
-
-
 def repair_3_block(G, k):
     """
     Make sure for a matrix, whichever a node fails, we can random b and Z to repair it.
@@ -607,13 +600,17 @@ def test_repair_4_block(num, G, k):
     return count/num
 
 
+def two_phase_checking_multiround(num, G, k, ):
+
+
 
 
 
 if __name__ == "__main__":
+
     # test 1
     # print(test_mds(MDS_matrix_library.G10_6))
-    print("The success probability for G8_4 is: ", test_repair_1_block(1000, MDS_matrix_library.G8_4, 2))   # 0.2
+    # print("The success probability for G8_4 is: ", test_repair_1_block(1000, MDS_matrix_library.G8_4, 2))   # 0.2
     # print("The success probability for G10_6_block is: ", test_repair_1_block(20, MDS_matrix_library.G10_6, 3))   # 0.525 in 200 tries
     # print("The success probability for G12_8_block is: ", test_repair_1_block(20, MDS_matrix_library.G12_8_block, 4))   # 0.675 in 200 tries
     # print("The success probability for G14_10_block is: ", test_repair_1_block(10, MDS_matrix_library.G14_10_block, 5))   # 0.88 in 200 tries
